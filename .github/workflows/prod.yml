@@ -44,7 +44,9 @@ jobs:
       # Step 7: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v6   # use latest version
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
+          publish_dir: ./_site          # folder with built site
+          publish_branch: gh-pages      # explicitly set branch
+          force_orphan: true            # creates the branch if it doesn't exist
