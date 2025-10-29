@@ -1,0 +1,297 @@
+---
+pagetitle: "Python pour la data science"
+page-layout: custom
+section-divs: false
+toc: false
+css: styles/homepage.css
+description: |
+  A complete course about data science.
+hide-description: true
+image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/kiddos.png
+listing:
+    id: sample-listings
+    contents:
+        - "content/getting-started/*.qmd"
+
+    type: grid
+    sort: "number"
+    categories: true
+echo: false
+---
+
+
+
+:::::: {.hero-banner}
+
+::::: {.content-block .py-4}
+
+:::: {.hero-text}
+
+::: {.content-visible when-profile="fr"}
+# Python pour la _data science_ {{< fa brands python >}} {.mt-1 .unnumbered}
+
+
+## [Lino Galiana](https://github.com/linogaliana/) {.mt-1 .unnumbered}
+
+```{=html}
+<div style="text-align: right;">
+<a class="github-button" href="https://github.com/linogaliana/python-datascientist" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star this website on Github">Star this website on Github</a><script async defer src="https://buttons.github.io/buttons.js"></script>
+</div>
+```
+
+### Une introduction complète à [`Python` {{< fa brands python >}}](https://www.ensae.fr/courses/1425-python-pour-le-data-scientist) {-}
+
+Cours de deuxième année du cursus d'ingénieur de l'[`ENSAE`](https://www.ensae.fr/) (Master 1).
+
+
+L'ensemble du contenu de ce cours est librement disponible ici
+ou sur [`Github`](https://github.com/linogaliana/python-datascientist)
+<a href="https://github.com/linogaliana/python-datascientist" class="github"><i class="fab fa-github"></i></a> et peut être testé
+sous forme de _notebooks_ [`Jupyter` {{< iconify simple-icons:jupyter >}}](https://en.wikipedia.org/wiki/Project_Jupyter).
+
+```{=html}
+<div class="lang-switch-button" style="text-align:right; margin-top:1rem; margin-bottom:1rem;">
+  <a href="/en/index.html" class="button-cta">
+    <button class="btn"><i class="fa fa-language"></i> Switch to English version
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20" style="vertical-align: middle; margin-left: 0.5em; display: inline-block;"><mask id="circleFlagsLangEn"><circle cx="256" cy="256" r="256" fill="#fff"/></mask><g mask="url(#circleFlagsLangEn)"><path fill="#eee" d="M256 0L0 256v64l32 32l-32 32v128l22-8l23 8h23l54-32l54 32h32l48-32l48 32h32l54-32l54 32h68l-8-22l8-23v-23l-32-54l32-54v-32l-32-48l32-48v-32l-32-54l32-54V0z"/><path fill="#d80027" d="M224 64v64h160l64-64zm0 128l32 64l-48 48v208h96V304h208v-96H304l16-16zM0 320v64h128l-64 64H0v64h45l131-131v-45l16-16zm336 16l176 176v-45L381 336Z"/><path fill="#0052b4" d="M0 0v256h256V0zm512 68L404 176h108zM404 336l108 108V336zm-228 68L68 512h108zm160 0v108h108z"/><path fill="#eee" d="m187 243l57-41h-70l57 41l-22-67zm-81 0l57-41H93l57 41l-22-67zm-81 0l57-41H12l57 41l-22-67zm162-81l57-41h-70l57 41l-22-67zm-81 0l57-41H93l57 41l-22-67zm-81 0l57-41H12l57 41l-22-67Zm162-82l57-41h-70l57 41l-22-67zm-81 0l57-41H93l57 41l-22-67Zm-81 0l57-41H12l57 41l-22-67Z"/></g></svg>
+    </button>
+  </a>
+</div>
+```
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# Python for _data science_ {{< fa brands python >}} {.mt-1 .unnumbered}
+
+
+## [Lino Galiana](https://github.com/linogaliana/) {.mt-1 .unnumbered}
+
+```{=html}
+<div style="text-align: right;">
+<a class="github-button" href="https://github.com/linogaliana/python-datascientist" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star this website on Github">Star this website on Github</a><script async defer src="https://buttons.github.io/buttons.js"></script>
+</div>
+```
+
+### A complete introduction to [`Python` {{< fa brands python >}}](https://www.ensae.fr/courses/1425-python-pour-le-data-scientist) {-}
+
+Second year engineering course from [`ENSAE`](https://www.ensae.fr/) (Master 1).
+
+
+The entire content of this course is freely available here
+or on [`Github`](https://github.com/linogaliana/python-datascientist)
+<a href="https://github.com/linogaliana/python-datascientist" class="github"><i class="fab fa-github"></i></a> and can be tested
+as _notebooks_ [`Jupyter` {{< iconify simple-icons:jupyter >}}](https://en.wikipedia.org/wiki/Project_Jupyter).
+
+```{=html}
+<div class="lang-switch-button" style="text-align:right; margin-top:1rem; margin-bottom:1rem;">
+  <a href="/index.html" class="button-cta">
+    <button class="btn"><i class="fa fa-language"></i> Passer à la version française
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20" style="vertical-align: middle; margin-left: 0.5em; display: inline-block;"><mask id="circleFlagsLangFr"><circle cx="256" cy="256" r="256" fill="#fff"/></mask><g mask="url(#circleFlagsLangFr)"><path fill="#0055A4" d="M0 0h512v512H0z"/><path fill="#fff" d="M170.7 0h170.6v512H170.7z"/><path fill="#EF4135" d="M341.3 0H512v512H341.3z"/></g></svg>
+    </button>
+  </a>
+</div>
+```
+
+:::
+
+<br>
+
+[Get Started](/content/getting-started/index.qmd){.btn-action-primary .btn-action .btn .btn-lg .w-100 role="button"}
+
+
+::::
+
+:::: {.hero-animation}
+![](https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/kiddos.png)
+::::
+
+:::::
+
+
+::::::
+
+
+:::: {.content-block .py-4}
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-1 nodetype="expression"}
+:::
+::::
+:::::
+
+
+::: {.content-visible when-profile="fr"}
+
+
+::::::{.cell}
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-2-1 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-2-2 nodetype="declaration"}
+:::
+::::
+:::::
+::::::
+
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+
+::::::{.cell}
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-3-1 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-3-2 nodetype="declaration"}
+:::
+::::
+:::::
+::::::
+
+:::
+
+
+
+::: {#sample-listings .list-chapter-unordered}
+:::
+
+
+::::
+
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-4 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+::::::{.cell}
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-5-1 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-5-2 nodetype="declaration"}
+:::
+::::
+:::::
+::::::
+
+
+:::::{.cell .hidden}
+
+::::{.cell-output .cell-output-display .hidden}
+
+:::{#ojs-cell-6 nodetype="expression"}
+:::
+::::
+:::::
+
+
+
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-7 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+
+::::::{.cell}
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-8-1 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-8-2 nodetype="declaration"}
+:::
+::::
+:::::
+::::::
+
+
+
+:::::{.cell .hidden}
+
+::::{.cell-output .cell-output-display .hidden}
+
+:::{#ojs-cell-9 nodetype="expression"}
+:::
+::::
+:::::
+
+
+
+:::::{.cell .hidden}
+
+::::{.cell-output .cell-output-display .hidden}
+
+:::{#ojs-cell-10 nodetype="expression"}
+:::
+::::
+:::::
+
+---
+jupyter:
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---

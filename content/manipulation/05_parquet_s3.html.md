@@ -1,0 +1,2376 @@
+---
+title: "Les nouveaux modes d'accès aux données : le format Parquet et les données sur le cloud"
+title-en: "New ways of accessing data: Parquet format and data in the cloud"
+author: Lino Galiana
+description: |
+  Le format `Parquet` est un format de données connaissant une popularité importante du fait de ses caractéristiques techniques (orientation colonne, compression, interopérabilité...), de sa nature _open source_ et du riche écosystème associé dont les frameworks les plus proéminents sont `Arrow` et `DuckDB`. A ces nombreux avantages s'ajoutent une intégration native aux infrastructures _cloud_ basées sur `S3`, des extensions nombreuses pour traiter des données complexes comme les données géographiques ou, plus récemment, le portage en WASM de `DuckDB` permettant de construire des applications réactives impliquant des transformations de données directement depuis le navigateur.
+description-en: | 
+  `Parquet` is a very popular data format, thanks to its technical characteristics (column orientation, compression, interoperability...), its open-source nature and the rich associated ecosystem, whose most prominent frameworks are `Arrow` and `DuckDB`. Added to these numerous advantages are native integration with cloud infrastructures based on `S3`, numerous extensions for handling complex data such as geographic data or, more recently, the WASM porting of `DuckDB` enabling responsive applications involving data transformations to be built directly from the browser.
+image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/python_cloud.png
+---
+
+
+{{< badges >}}
+
+
+::: {.content-visible when-profile="fr"}
+
+Nous avons vu dans les chapitres précédents comment récupérer, et harmoniser, des données issues de multiples sources: fichiers type CSV, API, _webscraping_, etc.  Le panorama des manières possibles de consommer de la donnée serait incomplet sans évoquer un nouveau venu dans le paysage de la donnée, à savoir le format de données `Parquet`.
+
+Du fait de ses caractéristiques techniques pensées pour l'analyse de données, et de sa simplicité d'usage avec `Python`, ce format devient de plus en plus incontournable. Il s'agit d'ailleurs d'une pierre angulaire des infrastructures _cloud_ qui, depuis le milieu des années 2010, tendent à devenir l'environnement usuel dans le domaine de la _data science_ (pour plus de détails, voir le [cours de mise en production de Romain Avouac et moi](https://ensae-reproductibilite.github.io/website/chapters/big-data.html)).  
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+In the previous chapters, we explored how to retrieve and harmonize data from various source: CSV files, APIs, web scraping, and more. However, no overview of data access methods would be complete without mentioning a relatively recent addition to the data ecosystem: the `Parquet` data format. 
+
+Thanks to its technical advantages - specifically designed for analytical workloads  - and its seamless integration with Python, `Parquet` is becoming increasingly essential. It has, in fact, become a key component of modern cloud infrastructures, which have emerged since the mid-2010s as the standard environment for data science workflows.[^lang-mlops-en]
+
+
+[^lang-mlops-en]: For more details, see the [production deployment course by Romain Avouac and myself](https://ensae-reproductibilite.github.io/website/chapters/big-data.html). Apologies to non-French-speaking readers—this resource is currently only available in French.
+
+
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+
+::: {.callout-tip}
+## Objectif de ce chapitre
+* Comprendre les enjeux liés au stockage et au traitement de différents formats de données ;  
+* Distinguer le stockage sous forme de fichier et sous forme de base de données ;  
+* Découvrir le format `Parquet`, ses avantages par rapport aux formats plats ou propriétaires ;  
+* Apprendre à traiter ces données avec `Arrow` et `DuckDB` ;  
+* Identifier les implications du stockage dans le _cloud_ et comment `Python` peut s'y adapter.
+:::
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+::: {.callout-tip}
+## Objectives
+
+* Understand the challenges involved in storing and processing different types of data formats  
+* Distinguish between file-based storage and database systems  
+* Discover `Parquet` format and its advantages over flat files and proprietary formats  
+* Learn how to work with `Parquet` data using `Arrow` and `DuckDB`  
+* Explore the implications of cloud-based storage and how `Python` can adapt to modern data infrastructures
+:::
+
+::::
+
+:::: {.content-visible when-profile="fr"}
+
+Ce chapitre s'appuie sur un atelier dédié au sujet que j'ai donné dans le cadre du réseau des _data scientists_ de la statistique publique (`SSPHub`)
+
+::: {.callout-note}
+## Replay de l'atelier sur ce sujet
+
+```{=html}
+<details>
+
+<summary>
+
+Afficher les slides associées
+
+</summary>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><iframe class="sourceCode yaml code-with-copy" src="https://inseefrlab.github.io/ssphub-ateliers-slides/slides-data/parquet"></iframe></div>
+
+
+_[Cliquer ici](https://inseefrlab.github.io/ssphub-ateliers-slides/slides-data/parquet){target="_blank"}
+pour les afficher en plein écran._
+
+</details>
+
+
+<details>
+
+
+<summary>
+
+Regarder le replay de la session live du 09 Avril 2025:
+
+</summary>
+
+{{< video https://minio.lab.sspcloud.fr/lgaliana/ssphub/replay/20250416_masterclass_parquet/GMT20250416-130715_Recording_1686x768.mp4 >}}
+
+
+</details>
+```
+:::
+
+:::
+
+:::: {.content-visible when-profile="fr"}
+
+# Elements de contexte
+
+## Principe du stockage de la donnée
+
+Avant de comprendre les apports du format `Parquet`, il est utile de revenir brièvement sur la manière dont l’information est stockée et rendue accessible à un langage de traitement comme `Python`[^lamarche-dondon].
+
+[^lamarche-dondon]: Pour en savoir plus sur les enjeux liés à un choix de format de données, voir @dondon2023quels.
+
+Deux approches principales coexistent : le **stockage sous forme de fichiers** et celui sous forme de **bases de données relationnelles**. La distinction entre ces deux paradigmes repose sur la façon dont l’accès aux données est organisé.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+# Contextual Elements
+
+## Principles of Data Storage
+
+Before exploring the advantages of the `Parquet` format, it is helpful to briefly review how data is stored and made accessible to a processing language like `Python`[^lamarche-dondon-en].
+
+[^lamarche-dondon-en]: For a deeper discussion of data format selection challenges, see @dondon2023quels.
+
+Two main approaches coexist: **file-based storage** and **relational database storage**. The key distinction between these paradigms lies in how access to data is structured and managed.
+
+::::
+
+:::: {.content-visible when-profile="fr"}
+
+## Le stockage sous forme de fichiers
+
+### Les fichiers plats
+
+Dans un fichier plat, les données sont organisées de manière linéaire, souvent séparées par un caractère (virgule, point-virgule, tabulation). Exemple avec un fichier `.csv` :
+
+```raw
+nom ; profession 
+Astérix ; 
+Obélix ; Tailleur de menhir ;
+Assurancetourix ; Barde
+```
+
+`Python` peut facilement structurer cette information :
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## File-Based Storage
+
+### Flat Files
+
+In a flat file, data is organized in a linear fashion, with values typically separated by a delimiter such as a comma, semicolon, or tab. Here’s a simple example using a `.csv` file:
+
+```raw
+nom ; profession 
+Astérix ; 
+Obélix ; Tailleur de menhir ;
+Assurancetourix ; Barde
+```
+
+`Python` can easily structure this information:
+
+::::
+
+
+
+1. `StringIO` permet de traiter la chaîne de caractère comme le contenu d'un fichier.
+
+:::: {.content-visible when-profile="fr"}
+
+À propos des fichiers de ce type, on parle de __fichiers plats__ car les enregistrements relatifs à une observation sont stockés ensemble, sans hiérarchie.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+These are referred to as __flat files__ because all the records related to a given observation are stored sequentially, without any hierarchical structure.
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+### Les fichiers hiérarchiques
+
+D'autres formats, comme `JSON`, structurent les données de manière hiérarchique :
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+### Hierarchical files
+
+Other formats, such as `JSON`, structure data in a hierarchical way:
+
+::::
+
+```json
+[
+  {
+    "nom": "Astérix"
+  },
+  {
+    "nom": "Obélix",
+    "profession": "Tailleur de menhir"
+  },
+  {
+    "nom": "Assurancetourix",
+    "profession": "Barde"
+  }
+]
+```
+
+:::: {.content-visible when-profile="fr"}
+
+Cette fois, quand on n'a pas d'information, on ne se retrouve pas avec nos deux séparateurs accolés (cf. la ligne _"Astérix"_) mais l'information
+n'est tout simplement pas collectée. 
+
+::: {.callout-caution}
+
+La différence entre un fichier `.csv` et un fichier `JSON` ne réside pas seulement dans le format : elle implique une autre logique de stockage.
+
+Le format `JSON`, non tabulaire, est plus souple : il permet de mettre à jour la structure des données sans recompiler ou modifier les anciennes lignes. Cela facilite la collecte évolutive dans des contextes comme les API.
+
+Par exemple, un site web qui collecte de nouvelles données n'aura pas à mettre à jour l'ensemble de ses enregistrements antérieurs pour stocker la nouvelle donnée (par exemple pour indiquer que pour tel ou tel client cette donnée n'a pas été collectée) mais pourra la stocker dans un nouvel item.
+
+Ce sera à l'outil de requête (`Python` ou un autre outil)
+de créer une relation entre les enregistrements stockés à des endroits différents.
+
+C’est ce principe qui sous-tend de nombreuses bases `NoSQL` (comme `ElasticSearch`), centrales dans l’univers du _big data_.
+
+:::
+
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+In such cases, when information is missing - as in the line for _"Astérix"_ - you don’t see two delimiters side by side. Instead, the missing data is simply left out.
+
+::: {.callout-caution}
+
+The difference between a `.csv` file and a `JSON` file lies not only in their format but also in their underlying logic of data storage.
+
+`JSON` is a non-tabular format that offers greater flexibility: it allows the structure of the data to evolve over time without requiring previous entries to be modified or recompiled. This makes it particularly well-suited for dynamic data collection environments, such as APIs.
+
+For instance, a website that begins collecting a new piece of information doesn't need to retroactively update all prior records. It can simply add the new field to the relevant entries—omitting it from others where the information wasn't collected.
+
+It is then up to the query tool—such as `Python` or another platform—to reconcile and link data across these differing structures.
+
+This flexible approach underpins many `NoSQL` databases (like `ElasticSearch`), which play a central role in the _big data_ ecosystem.
+
+:::
+
+:::: 
+
+
+:::: {.content-visible when-profile="fr"}
+
+### Données réparties sur plusieurs fichiers
+
+Il est fréquent qu’une observation soit répartie entre plusieurs fichiers de formats différents. Par exemple, en géomatique, les contours géographiques peuvent être stockés de différentes manières pour accompagner les données qu'elles contextualisent:
+
+* Soit tout est empilé dans un unique fichier qui contient à la fois les contours géographiques et les valeurs attributaires. Cette logique est celle suivie, par exemple, par le `GeoJSON` ;
+* Soit plusieurs fichiers se répartissent l'ensemble des données et, pour lire la donnée dans son ensemble (contours géographiques, données des différentes zones géographiques, système de projection, etc.), il faudra donc associer ceux-ci pour avoir un tableau de données complet. C'est l'approche suivie par le format `Shapefile`.
+
+Lorsque la donnée est éclatée dans plusieurs fichiers, c'est alors à l’outil de traitement (ex. `Python`) d’effectuer la jonction logique.
+
+### Le rôle du _file system_
+
+Le **système de fichiers** (_file system_) permet à l’ordinateur de localiser physiquement les fichiers sur le disque. C’est un composant central dans la gestion de fichiers : il assure leur nommage, leur hiérarchie et leur accès.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+### Data split across multiple files
+
+It is common for a single observation to be distributed across multiple files in different formats. In geomatics, for example, geographic boundaries are often stored separately from the data that gives them context:
+
+* In some cases, everything is bundled into a single file that contains both the geographic shapes and the associated attribute values. This is the approach used by formats like `GeoJSON`;
+* In other cases, the data is split across several files, and reading the full information - geographic shapes, data for each zone, projection system, etc. - requires combining them. This is the case with the `Shapefile` format.
+
+When data is distributed across multiple files, this is up to the processing tool (e.g., `Python`) to perform the necessary joins and link the information together.
+
+### The role of the _file system_
+
+The **file system** enables the computer to locate files physically on the disk. It plays a central role in file management, handling file naming, folder hierarchy, and access permissions.
+
+:::: 
+
+
+:::: {.content-visible when-profile="fr"}
+
+## Le stockage sous forme de bases de données
+
+La logique des bases de données est différente. Elle est plus systémique. Une **base de données relationnelle** est gérée par un **Système de Gestion de Base de Données** (SGBD) qui permet :
+
+- de stocker des ensembles cohérents de données,
+- d’en permettre la mise à jour (ajout, suppression, modification),
+- d’en contrôler l’accès (droits utilisateurs, types de requêtes, etc.).
+
+Les données sont organisées en **tables** reliées par des **relations**, souvent selon un **schéma en étoile** :
+
+![Source: [Documentation Databricks](https://www.databricks.com/fr/glossary/star-schema)](https://www.databricks.com/wp-content/uploads/2022/04/star-schema-erd.png)
+
+Le logiciel associé à la base de données fera ensuite le lien entre ces tables à partir de requêtes `SQL`. L'un des logiciels les plus efficaces dans ce domaine est [`PostgreSQL`](https://www.postgresql.org/).
+
+`Python` est tout à fait utilisable pour passer une requête SQL à un gestionnaire de base de données. Historiquement, les packages [`sqlalchemy`](https://www.sqlalchemy.org/) et [`psycopg2`](https://www.psycopg.org/docs/) ont été très utilisés pour envoyer des requêtes à une base de données `PostgreSQL` (lire celle-ci, la mettre à jour, etc.). Aujourd'hui, [`DuckDB`](https://duckdb.org/), sur lequel nous reviendrons lorsque nous parlerons du format `Parquet`, est un choix pratique pour passer des requêtes SQL à un SGBD `PostgreSQL`.
+
+### Pourquoi les fichiers ont le vent en poupe {-}
+
+Le succès croissant des fichiers dans l’écosystème de la data science s’explique par plusieurs facteurs techniques et pratiques qui les rendent particulièrement adaptés aux usages analytiques modernes.
+
+En premier lieu, les fichiers sont beaucoup plus légers à manipuler que les bases de données. Ils ne nécessitent pas l'installation ou le maintien d’un logiciel de gestion spécialisé : un simple _file system_, déjà présent sur tout système d’exploitation, suffit à y accéder.
+
+Pour lire un fichier dans `Python`, il suffit d’utiliser une librairie comme `Pandas`. À l’inverse, interagir avec une base de données implique souvent :
+
+- l’installation et la configuration d’un SGBD (comme `PostgreSQL`, `MySQL`, etc.) ;
+- la gestion d’une connexion réseau ;
+- le recours à des bibliothèques comme `sqlalchemy` ou `psycopg2`.
+
+Cette différence de complexité rend l’approche fichier beaucoup plus souple et rapide pour les tâches exploratoires ou ponctuelles.
+
+Cette légèreté a une contrepartie : les fichiers ne permettent pas une gestion fine des droits d’accès. Il est difficile, par exemple, d’empêcher un utilisateur de modifier ou supprimer la donnée à moins de dupliquer le fichier et de travailler sur une copie. C’est l’une des limites de l’approche fichier dans les environnements multi-utilisateurs mais auxquelles les solutions _cloud_, notamment la technologie `S3` sur laquelle nous reviendrons, apportent des réponses.
+
+La principale raison pour laquelle les fichiers sont souvent privilégiés par rapport aux SGBD réside dans la nature des opérations effectuées. Les bases de données relationnelles prennent tout leur sens lorsque l’on doit gérer des écritures fréquentes ou des mises à jour complexes sur des ensembles de données structurés — c’est-à-dire dans une **logique applicative**, où la donnée évolue continuellement (ajout, modification, suppression).
+
+À l’inverse, dans un contexte **analytique**, on se contente généralement de lire et de manipuler temporairement des données sans modifier la source. L’objectif est d’interroger, d’agréger, de filtrer — pas de pérenniser les changements. Pour ce type d’usage, les fichiers (notamment dans des formats optimisés comme `Parquet`, comme nous allons le voir) sont parfaitement adaptés : ils offrent une lecture rapide, une portabilité élevée et n'imposent pas l'intermédiation d’un moteur de base de données.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## Storing Data in a Database
+
+The logic behind databases differs fundamentally and is more systematic in nature. A **relational database** is managed by a **Database Management System (DBMS)**, which provides capabilities for:
+
+- storing coherent datasets;
+- performing updates (insertions, deletions, modifications);
+- controlling access (user permissions, query types, etc.).
+
+Data is organized into **tables** connected by **relationships**, often structured according to a **star schema**:
+
+![Source: [Databricks Documentation](https://www.databricks.com/fr/glossary/star-schema)](https://www.databricks.com/wp-content/uploads/2022/04/star-schema-erd.png)
+
+The software managing the database links these tables together using `SQL` queries. One of the most powerful and widely used systems for this purpose is [`PostgreSQL`](https://www.postgresql.org/).
+
+`Python` can interact with databases by issuing SQL queries. Historically, packages such as [`sqlalchemy`](https://www.sqlalchemy.org/) and [`psycopg2`](https://www.psycopg.org/docs/) have been standard tools for communicating with `PostgreSQL` databases, enabling both reading and updating operations. More recently, [`DuckDB`](https://duckdb.org/) has emerged as a lightweight and user-friendly alternative for querying relational data, and it will be discussed again in the context of the `Parquet` format.
+
+### Why File-Based Storage is gaining popularity {-}
+
+The increasing popularity of file-based storage in the data science ecosystem is due to a number of technical and practical advantages that make it well-suited for modern analytical workflows.
+
+Files are generally more lightweight and easier to manage than databases. They do not require the installation or maintenance of specialized software; a basic file system, available on every operating system, is sufficient for accessing them.
+
+Reading a file in `Python` simply involves using a library such as `Pandas`. In contrast, interacting with a database typically requires:
+
+- installing and configuring a DBMS (e.g., `PostgreSQL`, `MySQL`);
+- managing network connections;
+- relying on libraries such as `sqlalchemy` or `psycopg2`.
+
+This additional complexity makes file-based workflows more flexible and faster for exploratory tasks.
+
+However, this simplicity comes with limitations. File-based systems generally lack fine-grained access control. For instance, preventing a user from modifying or deleting a file is difficult without duplicating it and working from a copy. This represents a constraint in multi-user environments, although cloud-based storage solutions — particularly `S3` technology, which will be addressed later — offer effective remedies.
+
+The primary reason why files are often preferred over DBMSs lies in the nature of the operations being performed. Relational databases are particularly well-suited for contexts involving frequent updates or complex operations on structured data — a typical **application logic**, in which data is continuously evolving (through insertions, updates, or deletions).
+
+By contrast, in **analytical** contexts, the focus is on reading and temporarily manipulating data without altering the original source. The objective is to query, aggregate, and filter — not to persist changes. In such scenarios, files (especially when stored in optimized formats like `Parquet`) are ideal: they offer fast read times, high portability, and eliminate the overhead associated with running a full database engine.
+
+:::: 
+
+
+:::: {.content-visible when-profile="fr"}
+
+# Le format `Parquet`
+
+Le format `CSV` a longtemps été plébiscité en raison de sa simplicité :
+
+- Il est **lisible par un humain** (un simple éditeur de texte suffit pour en lire le contenu) ;
+- Il repose sur une **structure tabulaire** simple, bien adaptée à de nombreuses situations d’analyse ;
+- Il est **universel** et interopérable, car non dépendant d’un logiciel particulier.
+
+Mais cette simplicité a un coût. Plusieurs limites du format `CSV` ont justifié l’émergence de formats plus performants pour l'analyse de données comme `Parquet`
+
+## Limites du format `CSV`
+
+Le CSV est un format **lourd** :
+
+* Il n’est pas compressé, ce qui augmente sa taille disque ;
+* Toutes les données y sont stockées de façon brute. L’optimisation du typage (entier, flottant, chaîne…) est laissée à la librairie qui l’importe (comme `Pandas`), ce qui nécessite de **scanner les données** à l’ouverture, augmentant le temps de chargement et le risque d’erreur.
+
+Le CSV est **orienté ligne** :
+
+* Pour accéder à une colonne spécifique, il faut lire **chaque ligne** du fichier puis en extraire la colonne d’intérêt ;
+* Ce modèle est peu performant lorsqu’on souhaite ne manipuler qu’un **sous-ensemble de colonnes** — un cas très courant en data science.
+
+Le CSV est **coûteux à modifier** :
+
+* Ajouter une colonne ou insérer une donnée intermédiaire implique de **réécrire tout le fichier**. Par exemple, ajouter une colonne `cheveux` nécessiterait de produire une nouvelle version du fichier :
+
+    ```raw
+    nom ; cheveux ; profession
+    Astérix ; blond ; 
+    Obélix ; roux ; Tailleur de menhir
+    Assurancetourix ; blond ; Barde
+    ```
+
+::: {.callout-note}
+## À propos des formats propriétaires
+
+La plupart des outils de data science proposent des formats de sérialisation spécifiques : 
+
+- `.pickle` pour `Python`,  
+- `.rda` ou `.RData` pour `R`,  
+- `.dta` pour `Stata`,  
+- `.sas7bdat` pour `SAS`.
+
+Cependant, ces formats sont **propriétaires** ou **fortement couplés à un langage**, ce qui pose des problèmes d’interopérabilité. Par exemple, `Python` ne peut pas lire nativement un `.sas7bdat`. Même s’il existe des bibliothèques dédiées, l’absence de documentation officielle rend le support incertain.
+
+À ce titre, malgré ses limites, le `.csv` conserve l’avantage de l’universalité. Mais le format `Parquet` combine cette portabilité avec des performances bien supérieures.
+:::
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+# The `Parquet` format
+
+The `CSV` format has long been popular for its simplicity:
+
+- It is **human-readable** (any text editor can open it);
+- It relies on a **simple tabular structure**, well-suited for many analytical situations;
+- It is **universal** and interoperable, as it is not tied to any specific software.
+
+However, this simplicity comes at a cost. Several limitations of the `CSV` format have led to the emergence of more efficient formats for data analysis, such as `Parquet`.
+
+## Limitations of the `CSV` format
+
+CSV is a **heavy** format:
+
+* It is not compressed, increasing its disk size;
+* All data is stored as raw text. Data type optimization (integer, float, string, etc.) is deferred to the importing library (like `Pandas`), which must **scan the data** at load time—slowing down performance and increasing error risk.
+
+CSV is **row-oriented**:
+
+* To access a specific column, every **row must be read**, and the relevant column extracted;
+* This model performs poorly when only a **subset of columns** is needed—a common case in data science.
+
+CSV is **expensive to modify**:
+
+* Adding a column or inserting intermediate data requires **rewriting the entire file**. For example, adding a `hair` column would mean generating a new version of the file:
+
+    ```raw
+    name ; hair ; profession
+    Asterix ; blond ; 
+    Obelix ; redhead ; Menhir sculptor
+    Assurancetourix ; blond ; Bard
+    ```
+
+::: {.callout-note}
+## About proprietary formats
+
+Most data science tools offer their own serialization formats:
+
+- `.pickle` for `Python`,  
+- `.rda` or `.RData` for `R`,  
+- `.dta` for `Stata`,  
+- `.sas7bdat` for `SAS`.
+
+However, these formats are **proprietary** or **tightly coupled to one language**, which raises interoperability issues. For example, `Python` cannot natively read `.sas7bdat`. Even when third-party libraries exist, the lack of official documentation makes support unreliable.
+
+In this regard, despite its limitations, `.csv` remains popular for its universality. But the `Parquet` format offers both this portability and significantly better performance.
+:::
+
+:::: 
+
+:::: {.content-visible when-profile="fr"}
+
+## L’émergence du format `Parquet`
+
+Pour répondre à ces limites, le format `Parquet`, développé comme [projet _open-source_ Apache](https://parquet.apache.org/), propose une approche radicalement différente.
+
+Sa principale caractéristique : il est **orienté colonne**. Contrairement au CSV, les données de chaque colonne sont stockées **séparément**. Cela permet :
+
+- de charger uniquement les colonnes utiles à une analyse ;
+- de compresser plus efficacement les données ;
+- d’accélérer significativement les requêtes sélectives.
+
+Voici une représentation tirée du [blog d'Upsolver](https://www.upsolver.com/blog/apache-parquet-why-use) qui illustre la différence entre stockage ligne (`row-based`) et stockage colonne (`columnar`) :
+
+![Parquet vs CSV](https://www.upsolver.com/wp-content/uploads/2020/05/Screen-Shot-2020-05-26-at-17.52.58.png)
+
+Dans notre exemple, on pourrait lire la colonne `profession` sans parcourir les noms, ce qui rend l'accès plus rapide (ignorez l'élément `pyarrow.Table`, nous
+reviendrons dessus) :
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## The Rise of the `Parquet` Format
+
+To address these limitations, the `Parquet` format—developed as an [Apache open-source project](https://parquet.apache.org/) offers a radically different approach.
+
+Its key characteristic: it is **column-oriented**. Unlike CSVs, data for each column is stored **separately**. This allows:
+
+- loading only the columns relevant for analysis;
+- more efficient data compression;
+- significantly faster selective queries.
+
+Here's a diagram from the [Upsolver blog](https://www.upsolver.com/blog/apache-parquet-why-use) illustrating the difference between row-based and columnar storage:
+
+![Parquet vs CSV](https://www.upsolver.com/wp-content/uploads/2020/05/Screen-Shot-2020-05-26-at-17.52.58.png)
+
+In our example, you could read the `profession` column without parsing names, making access faster (ignore the `pyarrow.Table` element—we’ll return to it later):
+
+:::: 
+
+
+
+:::: {.content-visible when-profile="fr"}
+
+Grâce à la structure orientée colonne, il est possible de lire uniquement une variable (comme `profession`) sans avoir à parcourir toutes les lignes du fichier.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+Thanks to the column-oriented structure, it is possible to read only a single variable (such as `profession`) without having to scan every row in the file.
+
+:::: 
+
+
+```raw
+path
+└── to
+    └── table
+        ├── gender=male
+        │   ├── country=US
+        │   │   └── data.parquet
+        │   ├── country=CN
+        │   │   └── data.parquet
+        └── gender=female
+            ├── country=US
+            │   └── data.parquet
+            ├── country=CN
+            │   └── data.parquet
+```
+
+:::: {.content-visible when-profile="fr"}
+
+À la lecture, l’ensemble est reconstruit sous forme tabulaire :
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+When read, the entire dataset is reconstructed into a tabular format:
+
+:::: 
+
+
+```raw
+root
+|-- name: string (nullable = true)
+|-- age: long (nullable = true)
+|-- gender: string (nullable = true)
+|-- country: string (nullable = true)
+```
+
+
+:::: {.content-visible when-profile="fr"}
+
+## Un format taillé pour l’analyse - pas uniquement le _big data_
+
+Comme le rappelle le blog d’Upsolver :
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## A format designed for analysis — not just big data
+
+As emphasized in the Upsolver blog:
+
+:::: 
+
+
+> _Complex data such as logs and event streams would need to be represented as a table with hundreds or thousands of columns, and many millions of rows. Storing this table in a row-based format such as CSV would mean:_
+>
+> - _Queries will take longer to run since more data needs to be scanned..._
+> - _Storage will be more costly since CSVs are not compressed as efficiently as Parquet_
+
+
+:::: {.content-visible when-profile="fr"}
+
+Mais le format `Parquet` **n’est pas réservé aux architectures _big data_**. Toute personne produisant ou manipulant des jeux de données bénéficiera de ses qualités :
+
+- fichiers plus petits,
+- import rapide et fiable,
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+However, the `Parquet` format **is not limited to _big data_ architectures**. Its advantages are accessible to anyone who produces or works with datasets, regardless of scale:
+
+- significantly reduced file sizes;
+- fast, reliable, and memory-efficient data import.
+
+:::: 
+
+<!---
+
+fin traduction pour le moment
+
+---->
+
+:::: {.content-visible when-profile="en"}
+
+The translation of this chapter is still in progress. The remaining sections will be available soon.
+
+::::
+
+:::: {.content-visible when-profile="fr"}
+
+## Lire un `Parquet` en `Python`: exemple
+
+Il existe de nombreuses librairies fonctionnant bien avec `Parquet` mais les deux plus utiles à connaître sont `PyArrow` et `DuckDB`. Nous avons déjà évoqué succinctement celles-ci lorsqu'il était question des alternatives à `Pandas` gérant mieux les données volumineuses. Ces librairies peuvent servir à effectuer les premières opérations lourdes avant de convertir les données obtenues, plus légères, en `pd.DataFrame`.    
+
+La librairie [`PyArrow`](https://arrow.apache.org/docs/python/) permet de lire et écrire des fichiers `Parquet` tout en tirant parti de la structure colonne du format[^doc-arrow]. Elle repose sur un objet `pyarrow.Table`, qui peut, une fois les calculs lourds effectués, être converti vers un `DataFrame` `Pandas` pour bénéficier d’un écosystème plus riche en fonctionnalités.
+
+La librairie [`DuckDB`](https://duckdb.org/docs/api/python/) permet d’interroger directement des fichiers `Parquet` à l’aide du langage `SQL`, sans les charger entièrement en mémoire. Autrement dit, elle reprend la philosophie du monde de la base de données (l'utilisation de SQL) mais sur des fichiers. Le résultat des requêtes peut, là aussi, être converti en `DataFrame` `Pandas`, ce qui permet de profiter à la fois de la souplesse de `Pandas` et de la performance du moteur SQL embarqué. Fonctionnalité moins connue, cette librairie permet aussi d'effectuer des opérations SQL directement sur un  `DataFrame` `Pandas`. Ceci peut être pertinent pour des situations où la syntaxe `Pandas` est peu pratique là où `SQL` est très bien fait ; par exemple, pour créer une nouvelle variable comme le résultat d'une statistique par groupe. 
+
+
+[^doc-arrow]: Il est recommandé de régulièrement consulter la documentation officielle de `pyarrow` concernant [la lecture et écriture de fichiers](https://arrow.apache.org/docs/python/parquet.html) et celle relative aux [manipulations de données](https://arrow.apache.org/cookbook/py/data.html).
+
+::: {.callout-tip}
+L'utilisation des alias `pa` pour `pyarrow` et `pq` pour `pyarrow.parquet` est une convention largement adoptée, à l'image de celle de `pd` pour `pandas`.
+:::
+
+Pour illustrer ces fonctionnalités, prenons un jeu de données issu des données synthétiques du recensement de la population diffusés par l'Insee. 
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## Reading a `Parquet` file in `Python`: example
+
+There are many libraries that integrate well with the `Parquet` format, but the two most important to know are `PyArrow` and `DuckDB`. These libraries were previously mentioned as alternatives to `Pandas` for handling larger-than-memory datasets. They are often used to perform heavy initial operations before converting the results into a lightweight `pd.DataFrame` for further analysis.
+
+The [`PyArrow`](https://arrow.apache.org/docs/python/) library enables efficient reading and writing of `Parquet` files by taking advantage of their columnar structure[^doc-arrow-en]. It operates on a `pyarrow.Table` object, which—after processing—can be converted to a `Pandas` `DataFrame` to leverage the broader capabilities of the `Pandas` ecosystem.
+
+The [`DuckDB`](https://duckdb.org/docs/api/python/) library allows you to query `Parquet` files directly using `SQL`, without loading the entire file into memory. In essence, it brings the database philosophy (structured queries via SQL) to file-based storage. The results of such queries can also be converted into a `Pandas` `DataFrame`, combining the convenience of `Pandas` with the efficiency of an embedded SQL engine.
+
+A lesser-known but valuable feature of `DuckDB` is its ability to perform SQL queries directly on a `Pandas` `DataFrame`. This can be especially useful when `Pandas` syntax becomes verbose or cumbersome—for example, when computing a new column based on grouped statistics, where SQL expressions can be more concise and readable.
+
+[^doc-arrow-en]: It is recommended to regularly
+consult official `pyarrow` documentation on [reading and writing files](https://arrow.apache.org/docs/python/parquet.html) and [data manipulation](https://arrow.apache.org/cookbook/py/data.html).
+
+::: {.callout-tip}
+Using `pa` for `pyarrow` and `pq` for `pyarrow.parquet` is a widely adopted convention, much like using `pd` for `pandas`.
+:::
+
+To demonstrate these features, we will use a dataset derived from the synthetic census data published by Insee, the French national statistics agency.
+
+
+:::: 
+
+::: {#a5251eb1 .cell}
+``` {.python .cell-code}
+import requests
+import pyarrow.parquet as pq
+
+# Example Parquet
+url = "https://minio.lab.sspcloud.fr/projet-formation/bonnes-pratiques/data/RPindividus/REGION=93/part-0.parquet"
+
+# Télécharger le fichier et l'enregistrer en local
+with open("example.parquet", "wb") as f:
+    response = requests.get(url)
+    f.write(response.content)
+```
+:::
+
+
+::::: {.panel-tabset group="language"}
+## `Arrow` 
+
+:::: {.content-visible when-profile="fr"}
+
+L'idéal pour bénéficier pleinement des optimisations permises par le format `Parquet` est de passer par `pyarrow.dataset`. Cela permettra de bénéficier des optimisations permises par le combo `Parquet` et `Arrow`, que toutes les manières de lire un `Parquet` avec `Arrow` ne proposent pas (cf. prochains exercices).
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+To fully benefit from the optimizations provided by the `Parquet` format, it is recommended to use `pyarrow.dataset`. This approach makes it possible to take full advantage of the performance gains offered by the combination of `Parquet` and `Arrow`, which are not always accessible when reading `Parquet` files using other methods available in the `Arrow` ecosystem (as will be explored in upcoming exercises).
+
+
+:::: 
+
+::: {#09727e71 .cell}
+``` {.python .cell-code}
+import pyarrow.dataset as ds
+
+dataset = ds.dataset(
+  "example.parquet"
+).scanner(columns = ["AGED", "IPONDI", "DEPT"])
+table = dataset.to_table()
+table
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+
+Pour importer et traiter ces données, on peut conserver
+les données sous le format `pyarrow.Table`
+ou transformer en `pandas.DataFrame`. La deuxième
+option est plus lente mais présente l'avantage
+de permettre ensuite d'appliquer toutes les
+manipulations offertes par l'écosystème
+`pandas` qui est généralement mieux connu que
+celui d'`Arrow`.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+To import and process these data, one can either keep the data in `pyarrow.Table` format or convert it into a `pandas.DataFrame`. The second option is slower but has the advantage of enabling all the manipulations offered by the `pandas` ecosystem, which is generally more familiar than that of `Arrow`.
+
+:::: 
+
+
+## `DuckDB` 
+
+::: {#f9dc5158 .cell}
+``` {.python .cell-code}
+import duckdb
+duckdb.sql("""
+FROM read_parquet('example.parquet')
+SELECT AGED, IPONDI, DEPT
+""")
+```
+:::
+
+
+:::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+## Des exercices pour en apprendre plus
+
+Voici une série d'exercices issues du cours de [mise en production de projets data science](https://ensae-reproductibilite.github.io/website/chapters/big-data.html#sec-new-formats) que Romain Avouac et moi proposons à la fin du cursus d'ingénieurs de l'ENSAE. 
+
+Ces exercices illustrent progressivement quelques concepts présentés ci-dessus tout en présentant les bonnes pratiques à adopter pour traiter des données volumineuses. La correction de ces exercices est disponible sur la page du cours en question.
+
+Tout au long de cette application, nous allons voir comment utiliser le format `Parquet` de la manière la plus efficiente possible. Afin de comparer les différents formats et méthodes d'utilisation, nous allons **comparer le temps d'exécution et l'usage mémoire d'une requête standard**. Commençons déjà, sur un premier exemple avec une donnée légère, pour comparer les formats `CSV` et `Parquet`.
+
+Pour cela, nous allons avoir besoin de récupérer des données au format `Parquet`. Nous proposons d'utiliser les données détaillées et anonymisées du recensement de la population française: environ 20 millions de lignes pour 80 colonnes. Le code pour récupérer celles-ci est donné ci-dessous
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+## Exercises to Learn More
+
+The following is a series of exercises adapted from the [production deployment of data science projects](https://ensae-reproductibilite.github.io/website/chapters/big-data.html#sec-new-formats) course, which Romain Avouac and I teach in the final year of the engineering program at ENSAE.
+
+These exercises progressively illustrate some of the key concepts discussed above, while also emphasizing best practices for working with large-scale data. Solutions to all exercises are available on the corresponding course page.
+
+In this practical section, we will explore how to use the `Parquet` format as efficiently as possible. To compare different data formats and access strategies, we will **measure and compare the execution time and memory usage of a standard query**. We will begin with a lightweight example that compares the performance of reading data in `CSV` versus `Parquet` format.
+
+To do so, we will first retrieve a dataset in `Parquet` format. We suggest using the detailed and anonymized French population census data, which contains approximately 20 million rows and 80 columns. The code to download and access this dataset is provided below.
+
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+::: {#4565e760 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Code pour récupérer les données"}
+import pyarrow.parquet as pq
+import pyarrow as pa
+import os
+
+# Définir le fichier de destination
+filename_table_individu = "data/RPindividus.parquet"
+
+# Copier le fichier depuis le stockage distant (remplacer par une méthode adaptée si nécessaire)
+os.system("mc cp s3/projet-formation/bonnes-pratiques/data/RPindividus.parquet data/RPindividus.parquet") #<1>
+
+# Charger le fichier Parquet
+table = pq.read_table(filename_table_individu)
+df = table.to_pandas()
+
+# Filtrer les données pour REGION == "24"
+df_filtered = df.loc[df["REGION"] == "24"]
+
+# Sauvegarder en CSV
+df_filtered.to_csv("data/RPindividus_24.csv", index=False)
+
+# Sauvegarder en Parquet
+pq.write_table(pa.Table.from_pandas(df_filtered), "data/RPindividus_24.parquet")
+```
+:::
+
+
+1. Cette ligne de code utilise l'utilitaire Minio Client disponible sur le `SSPCloud`. Si vous n'êtes pas sur cette infrastructure, vous pouvez vous référer à la boite dédiée
+
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+::: {#2e848a81 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Program to retrieve exercise dataset"}
+import pyarrow.parquet as pq
+import pyarrow as pa
+import os
+
+# Définir le fichier de destination
+filename_table_individu = "data/RPindividus.parquet"
+
+# Copier le fichier depuis le stockage distant (remplacer par une méthode adaptée si nécessaire)
+os.system("mc cp s3/projet-formation/bonnes-pratiques/data/RPindividus.parquet data/RPindividus.parquet") #<1>
+
+# Charger le fichier Parquet
+table = pq.read_table(filename_table_individu)
+df = table.to_pandas()
+
+# Filtrer les données pour REGION == "24"
+df_filtered = df.loc[df["REGION"] == "24"]
+
+# Sauvegarder en CSV
+df_filtered.to_csv("data/RPindividus_24.csv", index=False)
+
+# Sauvegarder en Parquet
+pq.write_table(pa.Table.from_pandas(df_filtered), "data/RPindividus_24.parquet")
+```
+:::
+
+
+1. This line of code uses the Minio Client utility available on the `SSPCloud`. If you're not on this infrastructure, please refer to the dedicated box.
+
+
+::::
+
+
+
+:::: {.content-visible when-profile="fr"}
+
+::: {.callout-important collapse="true"}
+## Si vous n'êtes pas sur le `SSPCloud`
+
+Vous devrez remplacer la ligne
+
+```{.python}
+os.system("mc cp s3/projet-formation/bonnes-pratiques/data/RPindividus.parquet data/RPindividus.parquet")
+```
+
+qui utilise l'outil en ligne de commande `mc` par un code téléchargeant cette donnée à partir de l'URL [https://projet-formation.minio.lab.sspcloud.fr/bonnes-pratiques/data/RPindividus.parquet](https://projet-formation.minio.lab.sspcloud.fr/bonnes-pratiques/data/RPindividus.parquet).
+
+Il y a de nombreuses manières de faire. Vous pouvez par exemple le faire en pur `Python` avec `requests`. Si vous avez `curl` installé, vous pouvez aussi l'utiliser. Par l'intermédiaire de `Python`, cela donnera la commande `os.system("curl -o data/RPindividus.parquet https://projet-formation/bonnes-pratiques/data/RPindividus.parquet")`.
+
+:::
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+::: {.callout-important collapse="true"}
+## If you are not on `SSPCloud`
+
+You will need to replace the line
+
+```{.python}
+os.system("mc cp s3/projet-formation/bonnes-pratiques/data/RPindividus.parquet data/RPindividus.parquet")
+```
+
+which uses the `mc` command-line tool, with code that downloads this data from the URL [https://projet-formation.minio.lab.sspcloud.fr/bonnes-pratiques/data/RPindividus.parquet](https://projet-formation.minio.lab.sspcloud.fr/bonnes-pratiques/data/RPindividus.parquet).
+
+There are many ways to do this. For instance, you can use plain `Python` with `requests`. If you have `curl` installed, you can use it as well. Via `Python`, this would translate to the command: `os.system("curl -o data/RPindividus.parquet https://projet-formation/bonnes-pratiques/data/RPindividus.parquet")`.
+
+:::
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+Ces exercices vont utiliser des décorateurs `Python`, c'est-à-dire des fonctions qui surchargent le comportement d'une autre fonction. En l'occurrence, nous allons créer une fonction exécutant une chaîne d'opérations et la surcharger avec une autre chargée de contrôler l'usage mémoire et le temps d'exécution.
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+These exercises will make use of `Python` decorators - functions that modify or extend the behavior of other functions. In our case, we will define a function that performs a series of operations, and then apply a decorator to it that tracks both memory usage and execution time.
+
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+::: {.callout-tip collapse="false"}
+# Partie 1 : Du `CSV` au `Parquet`
+
+* Créer un notebook `benchmark_parquet.ipynb` afin de réaliser les différentes comparaisons de performance de l'application
+* Créons notre décorateur, en charge de _benchmarker_ le code `Python`:
+
+<details>
+
+<summary>
+Dérouler pour retrouver le code du décorateur permettant de mesurer la performance
+</summary>
+
+
+  ::: {#dec11fa4 .cell}
+  ``` {.python .cell-code}
+  import time
+  from memory_profiler import memory_usage
+  from functools import wraps
+  import warnings
+  
+    def convert_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
+  
+    # Decorator to measure execution time and memory usage
+    def measure_performance(func, return_output=False):
+        @wraps(func)
+        def wrapper(return_output=False, *args, **kwargs):
+            warnings.filterwarnings("ignore")
+            start_time = time.time()
+            mem_usage = memory_usage((func, args, kwargs), interval=0.1)
+            end_time = time.time()
+            warnings.filterwarnings("always")
+  
+            exec_time = end_time - start_time
+            peak_mem = max(mem_usage)  # Peak memory usage
+            exec_time_formatted = f"\033[92m{exec_time:.4f} sec\033[0m"
+            peak_mem_formatted = f"\033[92m{convert_size(1024*peak_mem)}\033[0m"
+  
+            print(f"{func.__name__} - Execution Time: {exec_time_formatted} | Peak Memory Usage: {peak_mem_formatted}")
+            if return_output is True:
+                return func(*args, **kwargs)
+  
+        return wrapper
+  ```
+  :::
+  
+  
+</details>
+
+* Reprendre ce code pour encapsuler un code de construction d'une pyramide des âges dans une fonction `process_csv_appli1`
+
+<details>
+
+<summary>
+Dérouler pour récupérer le code pour mesurer les performances de la lecture en CSV
+</summary>
+
+
+  ::: {#26da3cf7 .cell}
+  ``` {.python .cell-code}
+  # Apply the decorator to functions
+  @measure_performance
+  def process_csv_appli1(*args, **kwargs):
+      df = pd.read_csv("data/RPindividus_24.csv")
+      return (
+          df.loc[df["DEPT"] == 36]
+          .groupby(["AGED", "DEPT"])["IPONDI"]
+          .sum().reset_index()
+          .rename(columns={"IPONDI": "n_indiv"})
+      )
+  ```
+  :::
+  
+  
+</details>
+
+* Exécuter `process_csv_appli1()` et `process_csv_appli1(return_output=True)`
+
+* Sur le même modèle, construire une fonction `process_parquet_appli1` basée cette fois sur le fichier `data/RPindividus_24.parquet` chargé avec la fonction [read_parquet](https://pandas.pydata.org/docs/reference/api/pandas.read_parquet.html) de `Pandas`
+* Comparer les performances (temps d'exécution et allocation mémoire) de ces deux méthodes grâce à la fonction.
+
+<details>
+
+<summary>
+Correction complète
+</summary>
+
+::: {#d180f7bb .cell}
+``` {.python .cell-code}
+import math
+import pandas as pd
+import time
+from memory_profiler import memory_usage
+from functools import wraps
+import warnings
+
+def convert_size(size_bytes):
+   if size_bytes == 0:
+       return "0B"
+   size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+   i = int(math.floor(math.log(size_bytes, 1024)))
+   p = math.pow(1024, i)
+   s = round(size_bytes / p, 2)
+   return "%s %s" % (s, size_name[i])
+
+# Decorator to measure execution time and memory usage
+def measure_performance(func, return_output=False):
+    @wraps(func)
+    def wrapper(return_output=False, *args, **kwargs):
+        warnings.filterwarnings("ignore")
+        start_time = time.time()
+        mem_usage = memory_usage((func, args, kwargs), interval=0.1)
+        end_time = time.time()
+        warnings.filterwarnings("always")
+
+        exec_time = end_time - start_time
+        peak_mem = max(mem_usage)  # Peak memory usage
+        exec_time_formatted = f"\033[92m{exec_time:.4f} sec\033[0m"
+        peak_mem_formatted = f"\033[92m{convert_size(1024*peak_mem)}\033[0m"
+
+        print(f"{func.__name__} - Execution Time: {exec_time_formatted} | Peak Memory Usage: {peak_mem_formatted}")
+        if return_output is True:
+            return func(*args, **kwargs)
+
+    return wrapper
+
+# Apply the decorator to functions
+@measure_performance
+def process_csv(*args, **kwargs):
+    df = pd.read_csv("data/RPindividus_24.csv")
+    return (
+        df.loc[df["DEPT"] == 36]
+        .groupby(["AGED", "DEPT"])["IPONDI"]
+        .sum().reset_index()
+        .rename(columns={"IPONDI": "n_indiv"})
+    )
+
+@measure_performance
+def process_parquet(*args, **kwargs):
+    df = pd.read_parquet("data/RPindividus_24.parquet")
+    return (
+        df.loc[df["DEPT"] == "36"]
+        .groupby(["AGED", "DEPT"])["IPONDI"]
+        .sum().reset_index()
+        .rename(columns={"IPONDI": "n_indiv"})
+    )
+
+process_csv()
+process_parquet()
+```
+:::
+
+
+</details>
+:::
+
+_❓️ Quelle semble être la limite de la fonction `read_parquet` ?_
+
+On gagne déjà un temps conséquent en lecture mais on ne bénéficie pas vraiment de l'optimisation permise par `Parquet` car on transforme les données directement après la lecture en `DataFrame` `Pandas`. On n'utilise donc pas l'une des fonctionnalités principales du format `Parquet`, qui explique ses excellentes performances: le _predicate pushdown_ qui consiste à optimiser notre traitement pour faire remonter, le plus tôt possible, les filtres sur les colonnes pour ne garder que celles vraiment utilisées dans le traitement.
+::::
+
+:::: {.content-visible when-profile="en"}
+::: {.callout-tip collapse="false"}
+# Part 1: From `CSV` to `Parquet`
+
+* Create a notebook named `benchmark_parquet.ipynb` to perform various performance comparisons throughout the application.  
+* Define a custom decorator that will be used to benchmark the `Python` code by measuring execution time and memory usage.
+
+<details>
+
+<summary>
+Click to expand and view the code for the performance-measuring decorator.
+</summary>
+
+
+  ::: {#a94d1e20 .cell}
+  ``` {.python .cell-code}
+  import time
+  from memory_profiler import memory_usage
+  from functools import wraps
+  import warnings
+  
+    def convert_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
+  
+    # Decorator to measure execution time and memory usage
+    def measure_performance(func, return_output=False):
+        @wraps(func)
+        def wrapper(return_output=False, *args, **kwargs):
+            warnings.filterwarnings("ignore")
+            start_time = time.time()
+            mem_usage = memory_usage((func, args, kwargs), interval=0.1)
+            end_time = time.time()
+            warnings.filterwarnings("always")
+  
+            exec_time = end_time - start_time
+            peak_mem = max(mem_usage)  # Peak memory usage
+            exec_time_formatted = f"\033[92m{exec_time:.4f} sec\033[0m"
+            peak_mem_formatted = f"\033[92m{convert_size(1024*peak_mem)}\033[0m"
+  
+            print(f"{func.__name__} - Execution Time: {exec_time_formatted} | Peak Memory Usage: {peak_mem_formatted}")
+            if return_output is True:
+                return func(*args, **kwargs)
+  
+        return wrapper
+  ```
+  :::
+  
+  
+</details>
+
+* Reuse this code to wrap the logic for constructing the age pyramid into a function named `process_csv_appli1`.
+
+<details>
+
+<summary>
+Click to expand and view the code used to measure the performance of reading CSV files.
+</summary>
+
+
+  ::: {#06e8d602 .cell}
+  ``` {.python .cell-code}
+  # Apply the decorator to functions
+  @measure_performance
+  def process_csv_appli1(*args, **kwargs):
+      df = pd.read_csv("data/RPindividus_24.csv")
+      return (
+          df.loc[df["DEPT"] == 36]
+          .groupby(["AGED", "DEPT"])["IPONDI"]
+          .sum().reset_index()
+          .rename(columns={"IPONDI": "n_indiv"})
+      )
+  ```
+  :::
+  
+  
+</details>
+
+* Run `process_csv_appli1()` and `process_csv_appli1(return_output=True)` to observe performance and optionally return the processed data.
+
+* Using the same approach, define a new function named `process_parquet_appli1`, this time based on the `data/RPindividus_24.parquet` file, and load it using `Pandas`' [`read_parquet`](https://pandas.pydata.org/docs/reference/api/pandas.read_parquet.html) function.
+
+* Compare the performance (execution time and memory usage) of the two methods using the benchmarking decorator.
+
+
+<details>
+
+<summary>
+Full correction
+</summary>
+
+::: {#27c5855a .cell}
+``` {.python .cell-code}
+import math
+import pandas as pd
+import time
+from memory_profiler import memory_usage
+from functools import wraps
+import warnings
+
+def convert_size(size_bytes):
+   if size_bytes == 0:
+       return "0B"
+   size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+   i = int(math.floor(math.log(size_bytes, 1024)))
+   p = math.pow(1024, i)
+   s = round(size_bytes / p, 2)
+   return "%s %s" % (s, size_name[i])
+
+# Decorator to measure execution time and memory usage
+def measure_performance(func, return_output=False):
+    @wraps(func)
+    def wrapper(return_output=False, *args, **kwargs):
+        warnings.filterwarnings("ignore")
+        start_time = time.time()
+        mem_usage = memory_usage((func, args, kwargs), interval=0.1)
+        end_time = time.time()
+        warnings.filterwarnings("always")
+
+        exec_time = end_time - start_time
+        peak_mem = max(mem_usage)  # Peak memory usage
+        exec_time_formatted = f"\033[92m{exec_time:.4f} sec\033[0m"
+        peak_mem_formatted = f"\033[92m{convert_size(1024*peak_mem)}\033[0m"
+
+        print(f"{func.__name__} - Execution Time: {exec_time_formatted} | Peak Memory Usage: {peak_mem_formatted}")
+        if return_output is True:
+            return func(*args, **kwargs)
+
+    return wrapper
+
+# Apply the decorator to functions
+@measure_performance
+def process_csv(*args, **kwargs):
+    df = pd.read_csv("data/RPindividus_24.csv")
+    return (
+        df.loc[df["DEPT"] == 36]
+        .groupby(["AGED", "DEPT"])["IPONDI"]
+        .sum().reset_index()
+        .rename(columns={"IPONDI": "n_indiv"})
+    )
+
+@measure_performance
+def process_parquet(*args, **kwargs):
+    df = pd.read_parquet("data/RPindividus_24.parquet")
+    return (
+        df.loc[df["DEPT"] == "36"]
+        .groupby(["AGED", "DEPT"])["IPONDI"]
+        .sum().reset_index()
+        .rename(columns={"IPONDI": "n_indiv"})
+    )
+
+process_csv()
+process_parquet()
+```
+:::
+
+
+</details>
+:::
+
+_❓️ What seems to be the limitation of the `read_parquet` function?_
+
+Although we already observe a significant speed improvement during file reading, we are not fully leveraging the optimizations provided by the `Parquet` format. This is because the data is immediately loaded into a `Pandas` `DataFrame`, where transformations are applied afterward.
+
+As a result, we miss out on one of `Parquet`’s core performance features: **predicate pushdown**. This optimization allows filters to be applied as early as possible—at the file scan level—so that only the relevant columns and rows are read into memory. By bypassing this mechanism, we lose much of what makes `Parquet` so efficient in analytical workflows.
+
+::::
+
+:::: {.content-visible when-profile="fr"}
+
+::: {.callout-tip collapse="false"}
+## Partie 2 : Exploiter la *lazy evaluation* et les optimisations d'`Arrow` ou de `DuckDB`
+
+La partie précédente a montré un **gain de temps considérable** du passage de `CSV` à `Parquet`. Néanmoins, l'**utilisation mémoire était encore très élevée** alors qu'on utilise de fait qu'une infime partie du fichier.
+
+Dans cette partie, on va voir comment utiliser la ***lazy evaluation*** et les **optimisations du plan d'exécution** effectuées par `Arrow` pour exploiter pleinement la puissance du format `Parquet`.
+
+* Ouvrir le fichier  `data/RPindividus_24.parquet` avec [pyarrow.dataset](https://arrow.apache.org/docs/python/dataset.html). Regarder la classe de l'objet obtenu.
+* Tester le code ci-dessous pour lire un échantillon de données:
+
+::: {#723d4d8f .cell}
+``` {.python .cell-code}
+(
+    dataset.scanner()
+    .head(5)
+    .to_pandas()
+)
+```
+:::
+
+
+Comprenez-vous la différence avec précédemment ? Observez dans la documentation la méthode `to_table` : comprenez-vous son principe ?
+
+* Construire une fonction `summarize_parquet_arrow` (resp. `summarize_parquet_duckdb`) qui importe cette fois les données avec la fonction [`pyarrow.dataset`](https://arrow.apache.org/docs/python/dataset.html) (resp. avec `DuckDB`) et effectue l'agrégation voulue.
+* Comparer les performances (temps d'exécution et allocation mémoire) des trois méthodes (`Parquet` lu et processé avec `Pandas`, `Arrow` et `DuckDB`) grâce à notre fonction.
+
+<details>
+
+<summary>
+Correction
+</summary>
+
+::: {#aaa90221 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Code complet de l'application"}
+import duckdb
+import pyarrow.dataset as ds
+
+@measure_performance
+def summarize_parquet_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_24.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+@measure_performance
+def summarize_parquet_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus_24.parquet", format="parquet")
+    table = dataset.to_table()
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+process_parquet()
+summarize_parquet_duckdb()
+summarize_parquet_arrow()
+```
+:::
+
+
+</details>
+
+:::
+
+Avec l'évaluation différée, on obtient donc un processus en plusieurs temps:
+
+* `Arrow` ou `DuckDB` reçoit des instructions, les optimise, exécute les requêtes
+* Seules les données en sortie de cette chaîne sont renvoyées à `Python`
+
+![](https://linogaliana.github.io/parquet-recensement-tutomate/img/duckdb-delegation1.png)
+::::
+
+:::: {.content-visible when-profile="en"}
+
+::: {.callout-tip collapse="false"}
+## Part 2: Leveraging *Lazy Evaluation* and the Optimizations of `Arrow` or `DuckDB`
+
+In the previous section, we observed a **significant improvement in read times** when switching from `CSV` to `Parquet`. However, **memory usage remained high**, even though only a small portion of the data was actually used.
+
+In this section, we will explore how to take advantage of ***lazy evaluation*** and **execution plan optimizations** offered by `Arrow` to fully unlock the performance benefits of the `Parquet` format.
+
+* Open the file `data/RPindividus_24.parquet` using [`pyarrow.dataset`](https://arrow.apache.org/docs/python/dataset.html). Check the class of the resulting object.
+* Run the code below to read a sample of the data:
+
+::: {#37159423 .cell}
+``` {.python .cell-code}
+(
+    dataset.scanner()
+    .head(5)
+    .to_pandas()
+)
+```
+:::
+
+
+Can you identify the difference compared to the previous approach? Consult the documentation for the `to_table` method—do you understand what it does and why it matters?
+
+* Create a function `summarize_parquet_arrow` (and a corresponding `summarize_parquet_duckdb`) that imports the data using [`pyarrow.dataset`](https://arrow.apache.org/docs/python/dataset.html) (or `DuckDB`) and performs the required aggregation.
+
+* Use the benchmarking decorator to compare the performance (execution time and memory usage) of the three approaches: reading and processing `Parquet` data using `Pandas`, `PyArrow`, and `DuckDB`.
+
+<details>
+
+<summary>
+Correction
+</summary>
+
+::: {#4e813c55 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Code complet de l'application"}
+import duckdb
+import pyarrow.dataset as ds
+
+@measure_performance
+def summarize_parquet_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_24.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+@measure_performance
+def summarize_parquet_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus_24.parquet", format="parquet")
+    table = dataset.to_table()
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+process_parquet()
+summarize_parquet_duckdb()
+summarize_parquet_arrow()
+```
+:::
+
+
+</details>
+
+
+:::
+
+With lazy evaluation, the process unfolds in several stages:
+
+* `Arrow` or `DuckDB` receives a set of instructions, builds an execution plan, optimizes it, and then executes the query;
+* Only the final result of this pipeline is returned to `Python`, rather than the entire dataset.
+
+
+![](https://linogaliana.github.io/parquet-recensement-tutomate/img/duckdb-delegation1.png)
+::::
+
+:::: {.content-visible when-profile="fr"}
+::: {.callout-tip collapse="false"}
+## Partie 3a : Et si on filtrait sur les lignes ?
+
+Ajoutez une étape de filtre sur les lignes dans nos requêtes:
+
+* Avec `DuckDB`, vous devez modifier la requête avec un `WHERE DEPT IN ('18', '28', '36')`
+* Avec `Arrow`, vous devez modifier l'étape `to_table` de cette manière: `dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))`
+
+::: {#d7b1afbe .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction"}
+import pyarrow.dataset as ds
+import pyarrow.compute as pc
+import duckdb
+
+@measure_performance
+def summarize_filter_parquet_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus.parquet", format="parquet")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+@measure_performance
+def summarize_filter_parquet_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_24.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+summarize_filter_parquet_arrow()
+summarize_filter_parquet_duckdb()
+```
+:::
+
+
+:::
+
+*❓️ Pourquoi ne gagne-t-on pas de temps avec nos filtres sur les lignes (voire pourquoi en perdons nous?) comme c'est le cas avec les filtres sur les colonnes ?*
+
+La donnée n'est pas organisée par blocs de lignes comme elle l'est par bloc de colonne. Heureusement, il existe pour cela un moyen: le partitionnement !
+::::
+
+:::: {.content-visible when-profile="en"}
+
+::: {.callout-tip collapse="false"}
+## Part 3a: What Happens When We Filter Rows?
+
+Let us now add a row-level filtering step to our queries:
+
+* With `DuckDB`, modify the SQL query to include a `WHERE` clause:  
+  `WHERE DEPT IN ('18', '28', '36')`
+
+* With `Arrow`, update the `to_table` call as follows:  
+  `dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))`
+
+::: {#d3343bc4 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction"}
+import pyarrow.dataset as ds
+import pyarrow.compute as pc
+import duckdb
+
+@measure_performance
+def summarize_filter_parquet_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus.parquet", format="parquet")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+@measure_performance
+def summarize_filter_parquet_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_24.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+summarize_filter_parquet_arrow()
+summarize_filter_parquet_duckdb()
+```
+:::
+
+
+:::
+
+*❓️ Why do row filters not improve performance (and sometimes even slow things down), unlike column filters?*
+
+This is because data is not stored in row blocks the way it is in column blocks. As a result, filtering rows does not allow the system to skip over large sections of the file as efficiently.
+
+Fortunately, there is a solution: **partitioning**.
+
+::::
+
+:::: {.content-visible when-profile="fr"}
+::: {.callout-tip collapse="false"}
+# Partie 3 : Le `Parquet` partitionné
+
+La *lazy evaluation* et les optimisations d'`Arrow` apportent des gain de performance considérables. Mais on peut encore faire mieux ! Lorsqu'on sait qu'on va être amené à **filter régulièrement les données selon une variable d'intérêt**, on a tout intérêt à **partitionner** le fichier `Parquet` selon cette variable.
+
+1. Parcourir la documentation de la fonction [`pyarrow.parquet.write_to_dataset`](https://arrow.apache.org/docs/python/parquet.html#writing-to-partitioned-datasets) pour comprendre comment spécifier une clé de partitionnement lors de l’écriture d’un fichier `Parquet`. Plusieurs méthodes sont possibles.
+
+2. Importer la table complète des individus du recensement depuis `"data/RPindividus.parquet"` avec la fonction [`pyarrow.dataset.dataset`](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.dataset.html) et l'exporter en une table partitionnée `"data/RPindividus_partitionne.parquet"`, partitionnée par la région (`REGION`) et le département (`DEPT`).
+
+3. Observer l’arborescence des fichiers de la table exportée pour voir comment la partition a été appliquée.
+
+4. Modifier nos fonctions d'import, filtre et agrégations via `Arrow` ou `DuckDB` pour utiliser, cette fois, le `Parquet` partitionné. Comparer à l'utilisation du fichier non partitionné.
+
+::: {#80038955 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction de la question 2 (écriture du Parquet partitionné)"}
+import pyarrow.parquet as pq
+dataset = ds.dataset(
+    "data/RPindividus.parquet", format="parquet"
+).to_table()
+
+pq.write_to_dataset(
+    dataset,
+    root_path="data/RPindividus_partitionne",
+    partition_cols=["REGION", "DEPT"]
+)
+```
+:::
+
+
+::: {#e3f35239 .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction de la question 4 (lecture du Parquet partitionné)"}
+import pyarrow.dataset as ds
+import pyarrow.compute as pc
+import duckdb
+
+@measure_performance
+def summarize_filter_parquet_partitioned_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus_partitionne/", partitioning="hive")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+@measure_performance
+def summarize_filter_parquet_complete_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus.parquet")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+
+@measure_performance
+def summarize_filter_parquet_complete_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+
+@measure_performance
+def summarize_filter_parquet_partitioned_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_partitionne/**/*.parquet', hive_partitioning = True)
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+
+summarize_filter_parquet_complete_arrow()
+summarize_filter_parquet_partitioned_arrow()
+summarize_filter_parquet_complete_duckdb()
+summarize_filter_parquet_partitioned_duckdb()
+```
+:::
+
+
+:::
+
+*❓️ Dans le cadre d'une mise à disposition de données en `Parquet`, comment bien choisir la/les clé(s) de partitionnement ? Quelle est la limite à garder en tête ?*
+::::
+
+:::: {.content-visible when-profile="en"}
+::: {.callout-tip collapse="false"}
+# Part 3: Partitioned `Parquet`
+
+*Lazy evaluation* and the optimizations available through `Arrow` already provide significant performance improvements. But we can go even further. When you know in advance that your queries will frequently **filter data based on a specific variable**, it is highly advantageous to **partition** the `Parquet` file using that variable.
+
+1. Review the documentation for [`pyarrow.parquet.write_to_dataset`](https://arrow.apache.org/docs/python/parquet.html#writing-to-partitioned-datasets) to understand how to define a partitioning key when writing a `Parquet` file. Several approaches are available.
+
+2. Import the full individuals table from the census using `pyarrow.dataset.dataset("data/RPindividus.parquet")`, and export it as a partitioned dataset to `"data/RPindividus_partitionne.parquet"`, using both `REGION` and `DEPT` as partitioning keys.
+
+3. Explore the resulting directory structure to examine how partitioning was applied—each partition key should create a subfolder representing a unique value.
+
+4. Update your data loading, filtering, and aggregation functions (using either `Arrow` or `DuckDB`) to operate on the partitioned `Parquet` file. Then compare the performance with the non-partitioned version.
+
+::: {#477ea2ee .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction de la question 2 (écriture du Parquet partitionné)"}
+import pyarrow.parquet as pq
+dataset = ds.dataset(
+    "data/RPindividus.parquet", format="parquet"
+).to_table()
+
+pq.write_to_dataset(
+    dataset,
+    root_path="data/RPindividus_partitionne",
+    partition_cols=["REGION", "DEPT"]
+)
+```
+:::
+
+
+::: {#17b3d61f .cell}
+``` {.python .cell-code code-fold="true" code-summary="Correction de la question 4 (lecture du Parquet partitionné)"}
+import pyarrow.dataset as ds
+import pyarrow.compute as pc
+import duckdb
+
+@measure_performance
+def summarize_filter_parquet_partitioned_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus_partitionne/", partitioning="hive")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+@measure_performance
+def summarize_filter_parquet_complete_arrow(*args, **kwargs):
+
+    dataset = ds.dataset("data/RPindividus.parquet")
+    table = dataset.to_table(filter=pc.field("DEPT").isin(['18', '28', '36']))
+
+    grouped_table = (
+        table
+        .group_by(["AGED", "DEPT"])
+        .aggregate([("IPONDI", "sum")])
+        .rename_columns(["AGED", "DEPT", "n_indiv"])
+        .to_pandas()
+    )
+
+    return (
+        grouped_table
+    )
+
+
+@measure_performance
+def summarize_filter_parquet_complete_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus.parquet')
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+
+@measure_performance
+def summarize_filter_parquet_partitioned_duckdb(*args, **kwargs):
+    con = duckdb.connect(":memory:")
+    query = """
+    FROM read_parquet('data/RPindividus_partitionne/**/*.parquet', hive_partitioning = True)
+    SELECT AGED, DEPT, SUM(IPONDI) AS n_indiv
+    WHERE DEPT IN ('11','31','34')
+    GROUP BY AGED, DEPT
+    """
+
+    return (con.sql(query).to_df())
+
+
+summarize_filter_parquet_complete_arrow()
+summarize_filter_parquet_partitioned_arrow()
+summarize_filter_parquet_complete_duckdb()
+summarize_filter_parquet_partitioned_duckdb()
+```
+:::
+
+
+:::
+
+*❓️ When delivering data in `Parquet` format, how should you choose the partitioning key(s)? What limitations should you keep in mind?*
+
+::::
+
+
+
+:::: {.content-visible when-profile="fr"}
+## Pour aller plus loin
+
+* La [formation aux bonnes pratiques `R` et `Git`](https://inseefrlab.github.io/formation-bonnes-pratiques-git-R/) développée par l'Insee avec des éléments très similaires à ceux présentés dans ce chapitre.
+* Un [atelier](https://linogaliana.github.io/parquet-recensement-tutomate/) sur le format `Parquet` et l'écosystème `DuckDB` pour l'EHESS avec des exemples `R` et `Python` utilisant la même source de données que l'application.
+* Le [guide de prise en main](https://ssphub.netlify.app/post/parquetrp/) des données du recensement au format `Parquet` avec des exemples d'utilisation de `DuckDB` en WASM (directement depuis le navigateur, sans installation `R` ou `Python`)
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+# Les données dans le _cloud_
+
+Le stockage _cloud_, dans le contexte de la science des données, reprend le principe de services comme `Dropbox` ou `Google Drive` : un utilisateur accède à des fichiers distants comme s’ils étaient sur son propre disque[^4]. Autrement dit, pour un utilisateur de `Python`, **la manipulation de fichiers stockés dans le cloud peut sembler identique** à celle de fichiers locaux.
+
+Mais contrairement à un dossier de type `Mes Documents/monsuperfichier`, les fichiers ne résident pas sur l’ordinateur local. Ils sont hébergés sur un serveur distant, et chaque opération (lecture, écriture) passe par une connexion réseau.
+
+## Pourquoi ne pas utiliser `Dropbox` ou `Drive` ?
+
+Néanmoins, `Dropbox` ou `Drive` ne sont pas faits pour du stockage de données. Pour ces dernières, il est plus pertinent d'utiliser une technologie adaptée (voir [le cours de mise en production](https://ensae-reproductibilite.github.io/website/chapters/big-data.html)). Les principaux fournisseurs de service  _cloud_ (AWS, GCP, Azure...) reposent sur le même principe avec un stockage orienté objet reposant sur une technologie de type `S3`.
+
+C’est pourquoi les principaux fournisseurs _cloud_ (AWS, Google Cloud, Azure...) proposent des solutions spécifiques au stockage de données, souvent basées sur des systèmes orientés objet, dont le plus connu est `S3`.
+
+## Le système `S3`
+
+Le système `S3` (_Simple Storage Service_), développé par Amazon, est devenu un standard dans le monde du stockage cloud. Il s’agit d’un système :
+
+- **fiable** (réplication des données) ;
+- **sécurisé** (données chiffrées, contrôle d’accès granulaire) ;
+- **scalable** (adapté à des volumes massifs).
+
+L’unité centrale de S3 est le **bucket** : un espace de stockage (privé ou public) qui peut contenir une arborescence de fichiers.
+
+Pour accéder à un fichier dans un bucket :
+
+- L’utilisateur doit être **autorisé** (via des identifiants ou des jetons d’accès, souvent appelés *tokens*) ;
+- Une fois authentifié, il peut **lire, écrire ou modifier** les fichiers à l’intérieur du bucket, à la manière d’un système de fichiers distant.
+
+::: {.callout-note}
+Les exemples suivants seront réplicables pour les utilisateurs de la plateforme
+SSP Cloud
+
+{{< badges >}}
+
+Ils peuvent également l'être pour des utilisateurs ayant un 
+accès à AWS, il suffit de changer l'URL du `endpoint` 
+présenté ci-dessous. 
+:::
+
+[^4]: Ce comportement est souvent rendu possible via des systèmes de fichiers virtuels ou des wrappers compatibles avec `pandas`, `pyarrow`, `duckdb`, etc.
+::::
+
+:::: {.content-visible when-profile="en"}
+# Data in the _Cloud_
+
+Cloud storage, in the context of data science, follows the same principle as services like `Dropbox` or `Google Drive`: users can access remote files as if they were stored locally on their machines[^4-en]. In other words, for a `Python` user, **working with cloud-stored files can feel exactly the same** as working with local files.
+
+However, unlike a local path such as `My Documents/mysuperfile`, the files are not physically stored on the user’s computer. They are hosted on a remote server, and every operation—reading or writing—relies on a network connection.
+
+## Why Not Use `Dropbox` or `Google Drive`?
+
+Despite their similarities, services like `Dropbox` or `Google Drive` are not intended for large-scale data storage and processing. For data-intensive use cases, it is strongly recommended to rely on dedicated storage technologies (see [the production deployment course](https://ensae-reproductibilite.github.io/website/chapters/big-data.html)). 
+
+All major cloud providers—AWS, Google Cloud Platform (GCP), Microsoft Azure—rely on a common principle: **object storage**, often implemented through `S3`-compatible systems.
+
+This is why leading cloud platforms offer specialized storage services, typically based on object storage, with `S3` (Simple Storage Service) being the most widely used and recognized standard.
+
+## The `S3` System
+
+`S3` (Simple Storage Service), developed by Amazon, has become the de facto standard for cloud-based storage. It is:
+
+- **Reliable**: Data is replicated across multiple servers or zones;
+- **Secure**: It supports encryption and fine-grained access control;
+- **Scalable**: It is designed to handle massive volumes of data without performance degradation.
+
+### The Concept of a *Bucket*
+
+The fundamental unit in `S3` is the **bucket**—a storage container (either private or public) that can contain a virtual file system of folders and files.
+
+To access a file stored in a bucket:
+
+- The user must be **authorized**, typically via credentials or secure access tokens;
+- Once authenticated, the user can **read, write, or modify** the contents of the bucket, similar to interacting with a remote file system.
+
+
+::: {.callout-note}
+The following examples are fully reproducible for  
+SSP Cloud platform users.
+
+{{< badges >}}
+
+They can also be used by AWS users—simply update the `endpoint` URL as shown below.
+
+:::
+
+[^4-en]: This functionality is often enabled through virtual file systems or filesystem wrappers compatible with libraries such as `pandas`, `pyarrow`, `duckdb`, and others.
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+## Comment faire avec Python ?
+
+### Les librairies principales
+
+L'interaction entre ce système distant de fichiers et une session locale de Python
+est possible grâce à des API. Les deux principales librairies sont les suivantes :
+
+* [boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html), une librairie créée et maintenue par Amazon ;
+* [s3fs](https://s3fs.readthedocs.io/en/latest/), une librairie qui permet d'interagir avec les fichiers stockés à l'instar d'un filesystem classique.
+
+Les librairies `pyarrow` et `duckdb` que nous avons déjà présentées permettent également de traiter des données stockées sur le _cloud_ comme si elles
+étaient sur le serveur local. C'est extrêmement pratique 
+et permet de fiabiliser la lecture ou l'écriture de fichiers
+dans une architecture _cloud_. 
+
+::: {.callout-note}
+
+Sur le SSP Cloud, les jetons d'accès au stockage S3 sont injectés automatiquement dans les services lors de leur création. Ils sont ensuite valides pour une durée de 7 jours. Si l'icône du service passe du vert au rouge, cela signifie que ces jetons sont périmés, il faut donc sauvegarder son code / ses données et reprendre depuis un nouveau service.
+
+:::
+::::
+
+:::: {.content-visible when-profile="en"}
+## How to do it with Python?
+
+### Key libraries
+
+Interaction between a remote file system and a local Python session  
+is made possible through APIs. The two main libraries for this purpose are:
+
+* [`boto3`](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html), a library developed and maintained by Amazon;
+* [`s3fs`](https://s3fs.readthedocs.io/en/latest/), a library that enables interaction with stored files as if they were part of a traditional local filesystem.
+
+The `pyarrow` and `duckdb` libraries we previously introduced also support working with cloud-stored data as if it were located on the local machine. This functionality is extremely convenient and helps ensure reliable reading and writing of files in cloud-based environments.
+
+::: {.callout-note}
+
+On SSP Cloud, access tokens for S3 storage are automatically injected into services when they are launched. These tokens remain valid for 7 days.  
+If the service icon changes from green to red, it indicates that the tokens have expired — you should save your code and data, then restart the session by launching a new service.
+
+:::
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+## Cas pratique : stocker les données de son projet sur le SSP Cloud
+
+Une composante essentielle de l'évaluation des projets `Python` est la __reproductibilité__, i.e. la possibilité de retrouver les mêmes résultats à partir des mêmes données d'entrée et du même code. Dans la mesure du possible, il faut donc que votre rendu final parte des données brutes utilisées comme source dans votre projet. Si les fichiers de données source sont accessibles via une URL publique par exemple, il est idéal de les importer directement à partir de cette URL au début de votre projet (voir le [TP Pandas](/content/manipulation/02_pandas_suite.qmd) pour un exemple d'un tel import via `Pandas`).
+
+En pratique, cela n'est pas toujours possible. Peut-être que vos données ne sont pas directement publiquement accessibles, ou bien sont disponibles sous des formats complexes qui demandent des pré-traitements avant d'être exploitables dans un format de donnée standard. Peut-être que vos données résultent d'une phase de récupération automatisée via une [API](/content/manipulation/04c_API_TP.qmd) ou du [webscraping](/content/manipulation/04a_webscraping_TP.qmd), auquel cas l'étape de récupération peut prendre du temps à reproduire. Par ailleurs, les sites internet évoluent fréquemment dans le temps, il est donc préférable de "figer" les données une fois l'étape de récupération effectuée. De la même façon, même s'il ne s'agit pas de données source, vous pouvez vouloir entraîner des modèles et stocker leur version entraînée, car cette étape peut également être chronophage.
+
+Dans toutes ces situations, il est nécessaire de pouvoir stocker des données (ou des modèles). **Votre dépôt `Git` n'est pas le lieu adapté pour le stockage de fichiers volumineux**. Un projet `Python` bien construit est modulaire: il sépare le stockage du code (`Git`), d'éléments de configuration (par exemple des jetons d'API qui ne doivent pas être dans le code) et du stockage des données. Cette séparation conceptuelle entre code et données permet de meilleurs projets. 
+
+Là où `Git` est fait pour stocker du code, on utilise des solutions adaptées pour le stockage de fichiers. De nombreuses solutions existent pour ce faire. Sur le SSP Cloud, on propose `MinIO`, une implémentation open-source du stockage `S3` présenté plus haut. Ce court tutoriel vise à présenter une utilisation standard dans le cadre de vos projets.
+
+::: {.callout-warning}
+Quelle que soit la solution de stockage retenue pour vos données/modèles, **le code ayant servir à produire ces objets doit impérativement figurer dans votre dépôt de projet**.
+:::
+
+::::
+
+:::: {.content-visible when-profile="en"}
+## Practical Case: Storing Your Project’s Data on SSP Cloud
+
+A key criterion for evaluating `Python` projects is __reproducibility__—the ability to obtain the same results using the same input data and code. Whenever possible, your final submission should begin with the raw data used as input for your project. If the source files are publicly available via a URL, the ideal approach is to import them directly at the start of your project (see the [Pandas lab](/content/manipulation/02_pandas_suite.qmd) for an example of such an import using `Pandas`).
+
+In practice, this is not always feasible. Your data may not be publicly accessible, or it might come in complex formats that require preprocessing before it can be used in standard workflows. In other cases, your dataset may be the result of an automated retrieval process—such as through an [API](/content/manipulation/04c_API_TP.qmd) or [web scraping](/content/manipulation/04a_webscraping_TP.qmd)—which can be time-consuming to reproduce. Moreover, since websites frequently change over time, it is often better to "freeze" the data once collected. Similarly, even if you are not storing raw data, you may want to preserve trained models, as the training process can also be resource-intensive.
+
+In all of these situations, you need a reliable way to store data or models. **Your `Git` repository is not the appropriate place to store large files.** A well-structured `Python` project follows a modular design: it separates code (versioned with `Git`), configuration elements (such as API tokens, which should never be hardcoded), and data storage. This conceptual separation leads to cleaner, more maintainable projects.
+
+While `Git` is designed for source code management, file storage requires dedicated solutions. Many such tools exist. On SSP Cloud, the recommended option is `MinIO`, an open-source implementation of the `S3` storage protocol introduced earlier. This brief tutorial will walk you through a standard workflow for using `MinIO` in your project.
+
+
+::: {.callout-warning}
+No matter which storage solution you use for your data or models, **you must include the code that generates these objects in your project repository
+:::
+
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+### Partager des fichiers sur le SSP Cloud
+
+Comme expliqué plus haut, on stocke les fichiers sur `S3` dans un bucket. Sur le SSP Cloud, un bucket est créé automatiquement lors de votre création de compte, avec le même nom que votre compte SSP Cloud. L'interface [Mes Fichiers](https://datalab.sspcloud.fr/my-files) vous permet d'y accéder de manière visuelle, d'y importer des fichiers, de les télécharger, etc. 
+
+Dans ce tutoriel, nous allons plutôt y accéder de manière programmatique, via du code `Python`. Le package `s3fs` permet de requêter votre bucket à la manière d'un filesystem classique. Par exemple, vous pouvez lister les fichiers disponibles sur votre *bucket* avec la commande suivante :
+::::
+
+:::: {.content-visible when-profile="en"}
+### Sharing files on SSP Cloud
+
+As mentioned earlier, files are stored on `S3` in a bucket. On SSP Cloud, a bucket is automatically created when your account is set up, and it has the same name as your SSP Cloud username. The [My Files](https://datalab.sspcloud.fr/my-files) interface allows you to access it visually, upload files, download them, and more.
+
+In this tutorial, however, we’ll access it programmatically using `Python` code. The `s3fs` package lets you interact with your bucket just like a regular file system. For example, you can list the files available in your *bucket* using the following command:
+::::
+
+::: {#bda59f31 .cell}
+``` {.python .cell-code}
+import s3fs
+
+fs = s3fs.S3FileSystem(client_kwargs={"endpoint_url": "https://minio.lab.sspcloud.fr"})
+
+MY_BUCKET = "mon_nom_utilisateur_sspcloud"
+fs.ls(MY_BUCKET)
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+Si vous n'avez jamais ajouté de fichier sur MinIO, votre *bucket* est vide, cette commande devrait donc renvoyer une liste vide. On va donc ajouter un premier dossier pour voir la différence.
+
+Par défaut, un bucket vous est personnel, c'est à dire que les données qui s'y trouvent ne peuvent être lues ou modifiées que par vous. Dans le cadre de votre projet, vous aurez envie de partager ces fichiers avec les membres de votre groupe pour développer de manière collaborative. Mais pas seulement ! Il faudra également que vos correcteurs puissent accéder à ces fichiers pour reproduire vos analyses. 
+
+Il existe différentes possibilités de rendre des fichiers plus ou moins publics sur `MinIO`. La plus simple, et celle que nous vous recommandons, est de créer un dossier `diffusion` à la racine de votre bucket. Sur le SSP Cloud, tous les fichiers qui se situent dans un dossier `diffusion` sont accessibles **en lecture** à l'ensemble des utilisateurs authentifiés. Utilisez l'interface [Mes Fichiers](https://datalab.sspcloud.fr/my-files) pour créer un dossier `diffusion` à la racine de votre *bucket*. Si tout a bien fonctionné, la commande `Python` ci-dessus devrait désormais afficher le chemin `mon_nom_utilisateur_sspcloud/diffusion`.
+
+::: {.callout-note}
+## Le stockage *cloud* favorise le travail collaboratif ! 
+
+Plutôt que chaque membre du projet travaille avec ses propres fichiers sur son ordinateur, ce qui implique une synchronisation fréquente entre membres du groupe et limite la reproductibilité du fait des risques d'erreur, les fichiers sont mis sur un dépôt central, que chaque membre du groupe peut ensuite requêter. 
+
+Pour cela, il faut simplement s'accorder au sein du groupe pour utiliser le bucket d'un des membres du projet, et s'assurer que les autres membres du groupe peuvent accéder aux données, en les mettant dans le dossier `diffusion` du bucket choisi.
+:::
+::::
+
+:::: {.content-visible when-profile="en"}
+If you’ve never added any files to MinIO, your *bucket* will be empty, so the command above should return an empty list. Let’s add a first folder to see the difference.
+
+By default, a bucket is personal, meaning the data inside can only be read or modified by you. For your project, you'll want to share these files with your group members to collaborate efficiently. But that’s not all! Your instructors will also need to access these files to reproduce your analyses.
+
+There are several ways to make files more or less public on `MinIO`. The simplest—and the one we recommend—is to create a folder named `diffusion` at the root of your bucket. On SSP Cloud, all files inside a `diffusion` folder are **readable** by all authenticated users. Use the [My Files](https://datalab.sspcloud.fr/my-files) interface to create a `diffusion` folder at the root of your *bucket*. If everything worked correctly, the Python command above should now display the path `your_sspcloud_username/diffusion`.
+
+::: {.callout-note}
+## Cloud storage encourages collaborative work!
+
+Instead of each project member working with their own files on their personal machine—which would require frequent syncing and makes reproducibility more error-prone—files are placed in a central repository that every group member can access.
+
+To do this, the group should agree to use one member’s bucket, and ensure that other members can access the data by placing it in the `diffusion` folder of the selected bucket.
+:::
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+### Récupération et stockage de données
+
+Maintenant que nous savons où mettre nos données sur `MinIO`, regardons comment le faire en pratique depuis `Python`.
+
+#### Cas d'un Dataframe {-}
+
+Reprenons un exemple issu du cours sur les [API](/content/manipulation/04c_API_TP.qmd#illustration-avec-une-api-de-lademe-pour-obtenir-des-diagnostics-énergétiques) pour simuler une étape de récupération de données coûteuse en temps. 
+
+::: {#491a12a7 .cell}
+``` {.python .cell-code}
+import requests
+import pandas as pd
+
+url_api = "https://koumoul.com/data-fair/api/v1/datasets/dpe-france/lines?format=json&q_mode=simple&qs=code_insee_commune_actualise%3A%2201450%22&size=100&select=%2A&sampling=neighbors"
+response_json = requests.get(url_api).json()
+df_dpe = pd.json_normalize(response_json["results"])
+
+df_dpe.head(2)
+```
+:::
+
+
+Cette requête nous permet de récupérer un _DataFrame_ `Pandas`, dont les deux premières lignes sont imprimées ci-dessus. Dans notre cas le processus est volontairement simpliste, mais on peut imaginer que de nombreuses étapes de requêtage / préparation de la données sont nécessaires pour aboutir à un dataframe exploitable dans la suite du projet, et que ce processus est coûteux en temps. On va donc stocker ces données "intermédiaires" sur `MinIO` afin de pouvoir exécuter la suite du projet sans devoir refaire tourner tout le code qui les a produites.
+
+On peut utiliser les fonctions d'export de `Pandas`, qui permettent d'exporter dans différents formats de données. Vu qu'on est dans le cloud, une étape supplémentaire est nécessaire : on ouvre une connexion vers `MinIO`, puis on exporte notre dataframe.
+::::
+
+:::: {.content-visible when-profile="en"}
+### Retrieving and storing data
+
+Now that we know where to place our data on `MinIO`, let’s look at how to do it in practice using `Python`.
+
+#### Case of a DataFrame {-}
+
+Let’s revisit an example from the course on [APIs](/content/manipulation/04c_API_TP.qmd#illustration-avec-une-api-de-lademe-pour-obtenir-des-diagnostics-énergétiques) to simulate a time-consuming data retrieval step.
+
+::: {#69f2212f .cell}
+``` {.python .cell-code}
+import requests
+import pandas as pd
+
+url_api = "https://koumoul.com/data-fair/api/v1/datasets/dpe-france/lines?format=json&q_mode=simple&qs=code_insee_commune_actualise%3A%2201450%22&size=100&select=%2A&sampling=neighbors"
+response_json = requests.get(url_api).json()
+df_dpe = pd.json_normalize(response_json["results"])
+
+df_dpe.head(2)
+```
+:::
+
+
+This request returns a `Pandas` _DataFrame_, and the first two rows are printed above. In our example, the process is deliberately simple, but in practice, you might have many steps of querying and preparing the data before obtaining a usable DataFrame for the rest of the project. This process might be time-consuming, so we’ll store these "intermediate" data on `MinIO` to avoid rerunning all the code that generated them each time.
+
+We can use `Pandas` export functions, which allow saving data in various formats. Since we’re working in the cloud, one additional step is needed: we open a connection to `MinIO`, then export our DataFrame.
+::::
+
+::: {#931e6a7b .cell}
+``` {.python .cell-code}
+MY_BUCKET = "mon_nom_utilisateur_sspcloud"
+FILE_PATH_OUT_S3 = f"{MY_BUCKET}/diffusion/df_dpe.csv"
+
+with fs.open(FILE_PATH_OUT_S3, 'w') as file_out:
+    df_dpe.to_csv(file_out)
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+On peut vérifier que notre fichier a bien été uploadé via l'interface [Mes Fichiers](https://datalab.sspcloud.fr/my-files) ou bien directement en `Python` en interrogeant le contenu du dossier `diffusion` de notre *bucket* :
+::::
+
+:::: {.content-visible when-profile="en"}
+You can verify that your file has been successfully uploaded either via the [My Files](https://datalab.sspcloud.fr/my-files) interface, or directly in `Python` by checking the contents of the `diffusion` folder in your *bucket*:
+::::
+
+::: {#4b640d9d .cell}
+``` {.python .cell-code}
+fs.ls(f"{MY_BUCKET}/diffusion")
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+On pourrait tout aussi simplement exporter notre _dataset_ en `Parquet`, pour limiter l'espace de stockage et maximiser les performances à la lecture. Attention : vu que `Parquet` est un format compressé, il faut préciser qu'on écrit un fichier binaire : le mode d'ouverture du fichier passé à la fonction `fs.open` passe de `w` (`write`) à `wb` (`write binary`).
+::::
+
+:::: {.content-visible when-profile="en"}
+We could just as easily export our dataset in `Parquet` format to reduce storage space and improve read performance. Note: since `Parquet` is a compressed format, you must specify that you're writing a binary file — the file opening mode passed to `fs.open` should be changed from `w` (write) to `wb` (write binary).
+::::
+
+::: {#842a51c8 .cell}
+``` {.python .cell-code}
+FILE_PATH_OUT_S3 = f"{MY_BUCKET}/diffusion/df_dpe.parquet"
+
+with fs.open(FILE_PATH_OUT_S3, 'wb') as file_out:
+    df_dpe.to_parquet(file_out)
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+#### Cas de fichiers {-}
+
+Dans la partie précédente, on était dans le cas "simple" d'un dataframe, ce qui nous permettait d'utiliser directement les fonctions d'export de `Pandas`. Maintenant, imaginons qu'on ait plusieurs fichiers d'entrée, pouvant chacun avoir des formats différents. Un cas typique de tels fichiers sont les fichiers `ShapeFile`, qui sont des fichiers de données géographiques, et se présentent sous forme d'une combinaison de fichiers (cf. [chapitre sur GeoPandas](/content/manipulation/03_geopandas_intro.qmd#le-format-shapefile-.shp-et-le-geopackage-.gpkg)). Commençons par récupérer un fichier `.shp` pour voir sa structure.
+
+On récupère ci-dessous les contours du département de la Réunion [produits par l'IGN](https://geoservices.ign.fr/telechargement-api/ADMIN-EXPRESS-COG-CARTO), sous la forme d'une archive `.7z` qu'on va décompresser en local dans un dossier `departements_fr`.
+::::
+
+:::: {.content-visible when-profile="en"}
+#### File-based use case {-}
+
+In the previous section, we dealt with the "simple" case of a DataFrame, which allowed us to use `Pandas`' built-in export functions. Now, let's imagine we have multiple input files, each potentially in a different format. A typical example of such files are `ShapeFile`s, which are geographic data files and are composed of several related files (see [GeoPandas chapter](/content/manipulation/03_geopandas_intro.qmd#le-format-shapefile-.shp-et-le-geopackage-.gpkg)). Let’s start by downloading a `.shp` file to inspect its structure.
+
+Below are the outlines of the department of Réunion [produced by the IGN](https://geoservices.ign.fr/telechargement-api/ADMIN-EXPRESS-COG-CARTO), in the form of a `..7z` archive that we will unzip locally into a folder called `departements_fr`.
+::::
+
+::: {#4375a743 .cell}
+``` {.python .cell-code}
+import io
+import os
+import requests
+import py7zr
+
+# Import et décompression
+contours_url = "https://data.geopf.fr/telechargement/download/ADMIN-EXPRESS-COG-CARTO/ADMIN-EXPRESS-COG-CARTO_3-2__SHP_RGR92UTM40S_REU_2023-05-03/ADMIN-EXPRESS-COG-CARTO_3-2__SHP_RGR92UTM40S_REU_2023-05-03.7z"
+response = requests.get(contours_url, stream=True)
+
+with py7zr.SevenZipFile(io.BytesIO(response.content), mode='r') as archive:
+    archive.extractall(path="departements_fr")
+
+# Vérification du dossier (local, pas sur S3)
+os.listdir("departements_fr")
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+Vu qu'il s'agit cette fois de fichiers locaux et non d'un *dataframe* `Pandas`, on doit utiliser le package `s3fs` pour transférer les fichiers du filesystem local au filesystem distant (`MinIO`). Grâce à la commande `put`, on peut copier en une seule commande le dossier sur `MinIO`. Attention à bien spécifier le paramètre `recursive=True`, qui permet de copier à la fois un dossier et son contenu.
+::::
+
+:::: {.content-visible when-profile="en"}
+Since we're now dealing with local files rather than a `Pandas` *DataFrame*, we need to use the `s3fs` package to transfer files from the local filesystem to the remote filesystem (`MinIO`). Using the `put` command, we can copy an entire folder to `MinIO` in a single step. Be sure to set the `recursive=True` parameter so that both the folder and its contents are copied.
+::::
+
+::: {#76b7e85c .cell}
+``` {.python .cell-code}
+fs.put("departements_fr/", f"{MY_BUCKET}/diffusion/departements_fr/", recursive=True)
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+Vérifions que le dossier a bien été copié :
+
+::: {#5db1cb70 .cell}
+``` {.python .cell-code}
+fs.ls(f"{MY_BUCKET}/diffusion/departements_fr")
+```
+:::
+
+
+Si le dossier, comme ici, contient des fichiers à plusieurs niveaux, il faudra parcourir la liste de manière récursive pour accéder aux fichiers. Si par exemple, on s'intéresse exclusivement aux découpages des communes, on pourra par exemple utiliser un [`glob`](https://docs.python.org/fr/3/library/glob.html):
+
+::: {#d7dc16a2 .cell}
+``` {.python .cell-code}
+fs.glob(f'{MY_BUCKET}/diffusion/departements_fr/**/COMMUNE.*')
+```
+:::
+
+
+Si tout a bien fonctionné, la commande ci-dessus devrait renvoyer une liste contenant les chemins sur `MinIO` des différents fichiers (`.shp`, `.shx`, `.prj`, etc.) constitutifs du `ShapeFile` des communes de la Réunion.
+::::
+
+:::: {.content-visible when-profile="en"}
+Let’s check that the folder was successfully copied:
+
+::: {#1bf073c3 .cell}
+``` {.python .cell-code}
+fs.ls(f"{MY_BUCKET}/diffusion/departements_fr")
+```
+:::
+
+
+If the folder, as in this case, contains files at multiple levels, you will need to browse the list recursively to access the files. If, for example, you are only interested in municipal divisions, you can use a [`glob`](https://docs.python.org/fr/3/library/glob.html):
+
+::: {#5643c2e9 .cell}
+``` {.python .cell-code}
+fs.glob(f'{MY_BUCKET}/diffusion/departements_fr/**/COMMUNE.*')
+```
+:::
+
+
+If everything worked correctly, the command above should return a list of file paths on `MinIO` for the various components of the Réunion cities `ShapeFile` (`.shp`, `.shx`, `.prj`, etc.).
+::::
+
+:::: {.content-visible when-profile="fr"}
+### Utilisation des données
+
+En sens inverse, pour récupérer les fichiers depuis `MinIO` dans une session `Python`, les commandes sont symétriques.
+
+#### Cas d'un dataframe {-}
+
+Attention à bien passer cette fois le paramètre `r` (`read`, pour lecture) et non plus `w` (`write`, pour écriture) à la fonction `fs.open` afin de ne pas écraser le fichier !
+
+::: {#629cad51 .cell}
+``` {.python .cell-code}
+MY_BUCKET = "mon_nom_utilisateur_sspcloud"
+FILE_PATH_S3 = f"{MY_BUCKET}/diffusion/df_dpe.csv"
+
+# Import
+with fs.open(FILE_PATH_S3, 'r') as file_in:
+    df_dpe = pd.read_csv(file_in)
+
+# Vérification
+df_dpe.head(2)
+```
+:::
+
+
+De même, si le fichier est en `Parquet` (en n'oubliant pas de passer de `r` à `rb` pour tenir compte de la compression) : 
+
+::: {#56ac5817 .cell}
+``` {.python .cell-code}
+MY_BUCKET = "mon_nom_utilisateur_sspcloud"
+FILE_PATH_S3 = f"{MY_BUCKET}/diffusion/df_dpe.parquet"
+
+# Import
+with fs.open(FILE_PATH_S3, 'rb') as file_in:
+    df_dpe = pd.read_parquet(file_in)
+
+# Vérification
+df_dpe.head(2)
+```
+:::
+
+
+#### Cas de fichiers {-}
+
+Dans le cas de fichiers, on va devoir dans un premier temps rapatrier les fichiers de `MinIO` vers la machine local (en l'occurence, le service ouvert sur le SSP Cloud).
+
+::: {#c7eeb2e7 .cell}
+``` {.python .cell-code}
+# Récupération des fichiers depuis MinIO vers la machine locale
+fs.get(f"{MY_BUCKET}/diffusion/departements_fr/", "departements_fr/", recursive=True)
+```
+:::
+
+
+Puis on les importe classiquement depuis `Python` avec le *package* approprié. Dans le cas des `ShapeFile`, où les différents fichiers sont en fait des parties d'un seul et même fichier, une seule commande permet de les importer après les avoir rappatriés.
+
+::: {#9e705b5b .cell}
+``` {.python .cell-code}
+from pathlib import Path
+import geopandas as gpd
+
+localpath = Path("departements_fr") #<1>
+
+
+df_dep = gpd.read_file(
+  list(
+    localpath.glob("**/COMMUNE.shp")
+  )[0] #<2>
+)
+df_dep.head(2)
+```
+:::
+
+
+1. Comme notre dossier contient beaucoup de fichiers, on va devoir faire une recherche dedans via, à nouveau, un [`glob`](https://docs.python.org/fr/3/library/glob.html)
+2. `Pathlib` nous donnant une liste, on se restreint au premier écho et on importe avec `GeoPandas`
+
+## Pour aller plus loin
+
+- [La documentation sur MinIO du SSPCloud](https://docs.sspcloud.fr/content/storage.html)
+::::
+
+:::: {.content-visible when-profile="en"}
+### Using the data
+
+In the reverse direction, to retrieve files from `MinIO` in a `Python` session, the commands are symmetrical.
+
+#### Case of a dataframe {-}
+
+Make sure to pass the `r` parameter (`read`, for reading) instead of `w` (`write`, for writing) to the `fs.open` function to avoid overwriting the file!
+
+::: {#ff22d5d8 .cell}
+``` {.python .cell-code}
+MY_BUCKET = "your_sspcloud_username"
+FILE_PATH_S3 = f"{MY_BUCKET}/diffusion/df_dpe.csv"
+
+# Import
+with fs.open(FILE_PATH_S3, 'r') as file_in:
+    df_dpe = pd.read_csv(file_in)
+
+# Check
+df_dpe.head(2)
+```
+:::
+
+
+Similarly, if the file is in `Parquet` format (don’t forget to use `rb` instead of `r` due to compression):
+
+::: {#d4294d32 .cell}
+``` {.python .cell-code}
+MY_BUCKET = "your_sspcloud_username"
+FILE_PATH_S3 = f"{MY_BUCKET}/diffusion/df_dpe.parquet"
+
+# Import
+with fs.open(FILE_PATH_S3, 'rb') as file_in:
+    df_dpe = pd.read_parquet(file_in)
+
+# Check
+df_dpe.head(2)
+```
+:::
+
+
+#### Case of files {-}
+
+For file collections, you’ll first need to download the files from `MinIO` to your local machine (i.e., the current SSP Cloud session).
+
+::: {#216a695a .cell}
+``` {.python .cell-code}
+# Retrieve files from MinIO to the local machine
+fs.get(f"{MY_BUCKET}/diffusion/departements_fr/", "departements_fr/", recursive=True)
+```
+:::
+
+
+Then, you can import them in the usual way using the appropriate `Python` package. For `ShapeFile`s, where multiple files make up a single dataset, one command is sufficient after retrieval:
+
+::: {#7acd4813 .cell}
+``` {.python .cell-code}
+from pathlib import Path
+import geopandas as gpd
+
+localpath = Path("departements_fr") #<1>
+
+
+df_dep = gpd.read_file(
+  list(
+    localpath.glob("**/COMMUNE.shp")
+  )[0] #<2>
+)
+df_dep.head(2)
+```
+:::
+
+
+1. As our file contains many files, we will need to search through it using, once again, a [`glob`](https://docs.python.org/fr/3/library/glob.html)
+2. `Pathlib` gives us a list, so we restrict ourselves to the first echo and import it with `GeoPandas`
+
+
+## To go further
+
+- [SSPCloud documentation on MinIO](https://docs.sspcloud.fr/content/storage.html)
+::::
+

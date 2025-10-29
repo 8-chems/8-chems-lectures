@@ -1,0 +1,105 @@
+project:
+  type: website
+  render:
+    - index.qmd
+    - 404.qmd
+    - content/getting-started/index.qmd
+    - content/manipulation/index.qmd
+    - content/manipulation/01_numpy.qmd
+    - content/manipulation/02_pandas_intro.qmd
+    - content/manipulation/02_suite_intro.qmd
+    - content/manipulation/02b_pandas_TP.qmd
+    - content/manipulation/02a_pandas_tutorial.qmd
+    - content/manipulation/03_geopandas_intro.qmd
+    - content/manipulation/04a_webscraping_TP.qmd
+    - content/manipulation/04c_API_TP.qmd
+    - content/manipulation/04b_regex_TP.qmd
+    - content/manipulation/05_parquet_s3.qmd
+
+
+profile:
+  default: fr
+  group: [fr, en]
+
+
+execute:
+  cache: true
+  keep-ipynb: true
+
+# WEBSITE ARCHITECTURE ---------------------
+
+website:
+  page-navigation: true
+  back-to-top-navigation: true
+  reader-mode: true
+  navbar:
+    background: "white"
+    search: true
+    title: false
+    left:
+      - file: index.qmd
+        text: Home
+      - sidebar:introduction
+      - sidebar:manipulation
+
+
+    tools:
+      - icon: github
+        href: https://github.com/linogaliana/python-datascientist
+  comments:
+    giscus:
+      repo: linogaliana/python-datascientist
+  twitter-card: true
+  site-url: https://pythonds.linogaliana.fr
+  repo-url: https://github.com/linogaliana/python-datascientist
+  repo-branch: main
+  issue-url: https://github.com/linogaliana/python-datascientist/issues/new
+  repo-actions: [edit, issue]
+
+format:
+  html:
+    include-after-body: build/js/mac.html
+    respect-user-color-scheme: true
+    theme:
+      light: [cosmo, styles/custom.scss, styles/custom-light.scss]
+      dark: [cosmo, styles/custom.scss, styles/custom-dark.scss]
+    css: styles/styles.css
+    toc: true
+    code-overflow: wrap
+    grid:
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+    highlight-style: monokai
+    anchor-sections: true
+  ipynb: default
+
+
+
+# PAGE OPTIONS ---------------------
+
+filters:
+  - at: pre-ast
+    path: _extensions/linogaliana/lang-switch/lang-notebook.lua
+  - at: pre-ast
+    path: _extensions/linogaliana/callout/callout-notebook.lua
+  - at: pre-ast
+    path: _extensions/linogaliana/lang-switch/warninglang.lua
+  - include-code-files
+  - build/replace-title.lua
+  - _extensions/linogaliana/details-iframe/details.lua
+  - _extensions/linogaliana/lang-switch/button.lua
+
+crossref:
+  chapters: true
+
+date-format: iso
+number-sections: true
+wrap: preserve
+format-links: false
+validate-yaml: false
+keep-ipynb: true
+lightbox: auto
+google-scholar: true
+highlight-style: a11y
+

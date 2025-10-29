@@ -1,0 +1,1909 @@
+---
+title: "Introduction aux données spatiales avec Geopandas"
+title-en: "Introduction to spatial data with Geopandas"
+author: Lino Galiana
+tags:
+  - geopandas
+  - Velib
+  - Tutoriel
+  - Cartographie
+  - Manipulation
+categories:
+  - Tutoriel
+  - Manipulation
+description: |
+  Les données géolocalisées se sont multipliées depuis quelques années, qu'il s'agisse de données open-data ou de traces numériques géolocalisées de type _big-data_. Pour les données spatiales, le package `GeoPandas` étend les fonctionalités de l'écosystème `Pandas` afin de permettre de manipuler des données géographiques complexes de manière simple.
+description-en: |
+  Geocoded data have been more and more used these recent years in research, public policies or business decisions. Data scientists use them a lot, whether they come from open data or geocoded digital traces. For spatial data, the `GeoPandas` package extends the functionalities of the `Pandas` ecosystem to enable handling complex geographical data in a simple manner. This chapter presents the challenge of handling spatial data with `Python`.
+image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/pirate.jfif
+echo: false
+bibliography: ../../reference.bib
+---
+
+{{< badges
+    printMessage="true"
+>}}
+
+:::: {.content-visible when-format="ipynb"}
+::: {.warninglang .callout-warning}
+:::
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+::: {.callout-tip collapse="true"}
+
+## Compétences à l'issue de ce chapitre
+
+- Connaître les structures de données centrales de **GeoPandas** : `GeoSeries` et `GeoDataFrame`, extensions respectives de `pandas.Series` et `pandas.DataFrame` pour gérer des géométries spatiales ;
+- Lire des données géospatiales depuis des fichiers variés (GeoPackage, Shapefile, GeoJSON…) avec la méthode `.read_file()` ;
+- Appliquer les méthodes standard de `pandas` sur un `GeoDataFrame`, notamment `head()` pour explorer les données tout en conservant les géométries ;
+- Visualiser facilement des données géospatiales avec la méthode `.plot()` intégrée, pour créer rapidement des cartes statiques ;
+- Comprendre et manipuler les systèmes de projection : définir un CRS avec `set_crs` et reprojeter les données avec `to_crs`.  
+
+:::
+
+::::
+
+  
+::::: {.content-visible when-profile="en"}
+
+::: {.callout-tip collapse="true"}
+
+## Skills you will acquire in this chapter
+
+- Get familiar with the core data structures in **GeoPandas**: `GeoSeries` and `GeoDataFrame`, which extend `pandas.Series` and `pandas.DataFrame` for working with spatial geometries  
+- Read geospatial data from various formats (GeoPackage, Shapefile, GeoJSON...) using the `.read_file()` method  
+- Use standard `pandas` methods on a `GeoDataFrame`, such as `head()`, while keeping spatial data intact  
+- Quickly visualize geospatial data using the built-in `.plot()` method to generate static maps  
+- Understand and work with coordinate reference systems (CRS): set a CRS using `set_crs()` and reproject data with `to_crs()`  
+
+:::
+
+::::
+
+# Introduction
+
+::: {.content-visible when-profile="fr"}
+
+## Quelle différence avec des données traditionnelles ?
+
+Les chapitres précédents ont permis de découvrir la manière 
+dont des données structurées peuvent être valorisées
+grâce à la librairie `Pandas`. Nous allons maintenant découvrir l'analyse
+de données plus complexes, à savoir les données spatiales. 
+Ces
+dernières sont une sophistication des données tabulaires puisqu'en plus
+de partager les propriétés de celles-ci (données aplaties dans une structure de colonnes et de lignes), elles comportent une dimension géographique supplémentaire. Celle-ci est plus ou moins complexe selon la nature des données: cela peut être des points (coordonnées de localisation en deux dimensions), des lignes (une suite de points), des lignes directionnelles (la même structure précédemment mais avec une direction), des polygones (un ensemble de points)... Cette diversité des objets géographiques vise à permettre des systèmes d'information et de représentation de nombreux objets géographiques.
+
+Par la suite, nous entendrons par _"données spatiales"_ l'ensemble des données qui portent sur les caractéristiques géographiques des objets (localisation, contours, liens).
+Les caractéristiques géographiques des objets sont décrites à l'aide d'un **système de coordonnées**. Celles-ci 
+permettent de représenter l'objet géographique dans un espace euclidien à deux dimensions $(x,y)$.
+Le passage de l'espace réel (la Terre, qui est une sphère en trois dimensions) à l'espace plan
+se fait grâce à un **système de projection**. 
+
+:::
+
+
+::: {.content-visible when-profile="en"}
+
+## What's so special with spatial data ?
+
+Previous chapters have introduced how structured data can be leveraged using the `Pandas` library. We will now explore the analysis of more complex data, namely spatial data. These datasets are more sophisticated than tabular data since they not only share the properties of tabular data (flattened data in a structure of columns and rows) but also include an additional geographical dimension. This dimension can be more or less complex depending on the nature of the data: it can be points (2D location coordinates), lines (a series of points), directional lines (the same structure as before but with a direction), polygons (a set of points), etc. This diversity of geographic objects aims to allow information systems and representations of numerous geographic objects.
+
+From now on, we will refer to _"spatial data"_ as all data that pertain to the geographical characteristics of objects (location, contours, links). The geographical characteristics of objects are described using a **coordinate system**. These allow the representation of the geographic object in a two-dimensional Euclidean space $(x,y)$. The transition from the real space (the Earth, which is a three-dimensional sphere) to the planar space is done through a **projection system**.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Structure des données spatiales
+
+Les données spatiales rassemblent classiquement deux types de données :
+
+1. des **données géographiques** (ou géométries) : objets géométriques tels que des points, des vecteurs, des polygones, ou des maillages (*raster*). Exemple: la forme de chaque commune, les coordonnées d'un bâtiment;
+2. des **données attributaires** (ou attributs) : des mesures et des caractéristiques associées aux objets géométriques. Exemple: la population de chaque commune, le nombre de fenêtres et le nombre d'étages d'un bâtiment.
+
+**Les données spatiales sont fréquemment traitées à l'aide d'un système d'information géographique (SIG)**, c'est-à-dire un système d'information capable de stocker, d'organiser et de présenter des données alphanumériques spatialement référencées par des coordonnées dans un système de référence (CRS). `Python` dispose de fonctionnalités lui permettant de réaliser les mêmes tâches qu'un SIG (traitement de données spatiales, représentations cartographiques).
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Structure of spatial data
+
+Spatial data typically gather two types of data:
+
+1. **Geographical data** (or geometries): geometric objects such as points, vectors, polygons, or meshes (*raster*). Example: the shape of each municipality, the coordinates of a building, etc. ;
+2. **Attributive data** (or attributes): measurements and characteristics associated with geometric objects. Example: the population of each municipality, the number of windows and the number of floors of a building, etc.
+
+**Spatial data are frequently processed using a geographic information system (GIS)**, which is an information system capable of storing, organizing, and presenting alphanumeric data spatially referenced by coordinates in a reference system (CRS). `Python` has functionalities allowing it to perform the same tasks as a GIS (processing spatial data, creating cartographic representations).
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Les données spatiales sont incontournables
+
+D'un usage initialement essentiellement militaire ou administratif, la production cartographique est, depuis au moins le XIXe siècle, très fréquente
+pour représenter de l'information socioéconomique. La représentation la plus connue dans ce domaine
+est la carte par aplat de couleur, dite carte choroplèthe[^limite-choro]. 
+
+D'après @chen2008brief, la première représentation de ce type 
+a été proposée par Charles Dupin en 1926
+pour représenter les niveaux d'instruction sur le territoire français. 
+L'émergence des cartes choroplèthes est en effet indissociable 
+de l'organisation du pouvoir sous forme d'entités pensées
+politiques supposées unitaires:
+les cartes du monde représentent souvent des aplats de couleurs à partir
+des nations, les cartes nationales à partir d'échelons administratifs
+(régions, départements, communes, mais aussi Etats ou _landers_). 
+
+![La première carte choroplèthes par Dupin (1826)](https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Carte_figurative_de_l%27instruction_populaire_de_la_France.jpg/800px-Carte_figurative_de_l%27instruction_populaire_de_la_France.jpg){width="60%" fig-align="center"}.
+
+[^limite-choro]: Malgré toutes ses limites, sur lesquelles nous reviendrons, la carte
+choroplèthe est tout de même instructive. Savoir en produire une rapidement,
+pour saisir les principaux faits structurants d'un jeu de données, est
+particulièrement utile. 
+
+Si la production d'information géographique a pu être très liée à un usage militaire puis à la gestion administrative d'un territoire, la
+numérisation de l'économie ayant démultipliée les acteurs concernés par la collecte et la mise à disposition de données géographique, la manipulation et la représentation de données spatiales n'est plus l'apanage des géographes et géomaticiens. Les _data scientists_ doivent être capables de rapidement explorer la structure d'un jeu de données géographique comme ils le feraient d'un jeu de données tabulaires classiques. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Spatial data analysis is not new
+
+Initially used mainly for military or administrative purposes, cartographic production has been very common to represent socioeconomic information since at least the 19th century. The most well-known representation in this field is the choropleth map[^limite-choro].
+
+According to @chen2008brief, the first representation of this type was proposed by Charles Dupin in 1926 to represent education levels in France. The emergence of choropleth maps is indeed inseparable from the organization of power into entities considered unitary: world maps often represent color gradients based on nations, national maps based on administrative levels (regions, departments, municipalities, but also states or _landers_).
+
+![The first choropleth map by Dupin (1826)](https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Carte_figurative_de_l%27instruction_populaire_de_la_France.jpg/800px-Carte_figurative_de_l%27instruction_populaire_de_la_France.jpg){width="60%" fig-align="center"}.
+
+[^limite-choro]: Despite all its limitations, which we will revisit, the choropleth map is nonetheless informative. Knowing how to produce one quickly to grasp the main structuring facts of a dataset is particularly useful.
+
+While the production of geographical information may have been closely tied to military use and administrative management of a territory, the digitalization of the economy has multiplied the actors concerned with collecting and making geographical data available. Thus, handling and representing spatial data is no longer the exclusive domain of geographers and geomatics engineers. Data scientists must be able to quickly explore the structure of a geographic dataset just as they would with traditional tabular datasets.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Où trouver la donnée spatiale française ?
+
+Lors de notre périple de découverte de `Pandas`,
+nous avons déjà rencontré quelques sources géolocalisées,
+notamment produites par l'Insee. Cette institution publie
+de nombreuses statistiques locales, par exemple les données
+Filosofi que nous avons rencontrées au chapitre précédent. Au-delà 
+de l'Insee, l'ensemble des institutions du système
+statistique public (Insee et services statistiques ministériels)
+publie de nombreuses sources de données agrégées à différentes
+mailles géographiques: à un niveau infracommunal (par exemple par [carreaux de 200m](https://www.insee.fr/fr/statistiques/6215138?sommaire=6215217)),
+au niveau communal ou à des niveaux supracommunaux (zonages administratifs ou zonages d'études). 
+
+Plus généralement, de nombreuses administrations françaises hors
+du système statistique public diffusent des données
+géographiques sur [data.gouv](https://www.data.gouv.fr/fr/). Nous avons par exemple précédemment exploité un jeu de données de l'Ademe dont la dimension géographique était la commune. 
+
+L'acteur central de l'écosystème public de la donnée géographique est l'[IGN](https://www.ign.fr/). Bien connu des amateurs de randonnées pour ses cartes _"Top 25"_ qui peuvent être retrouvées sur le [geoportail](https://www.geoportail.gouv.fr/carte), l'IGN est également en charge de la cartographie des limites légales des entités administratives françaises (base AdminExpress), des forêts (BDForêt), des routes (BDRoute), des bâtiments (BDTopo), etc. Nous avons succinctement évoqué la librairie [`cartiflette`](https://github.com/InseeFrLab/cartiflette) lors du chapitre précédent, qui permet de récupérer les fonds de carte administratifs (base AdminExpress) de manière flexible avec `Python` ; nous irons plus loin dans ce chapitre. 
+
+La puissance publique n'est plus l'unique acteur qui produit et diffuse de la donnée spatiale. La collecte de coordonnées GPS étant devenue presque automatique, de nombreux acteurs collectent, exploitent et même revendent de la donnée spatiale sur leurs utilisateurs. Ces données peuvent être très précises et très riches sur certaines problématiques, par exemple sur les déplacements. Il est néanmoins nécessaire d'avoir à l'esprit lorsqu'on désire
+extrapoler des statistiques construites sur ces données que celles-ci concernent les utilisateurs du service en question, qui ne sont pas nécessairement représentatifs des comportements de la population dans son ensemble.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Where can we find French spatial data?
+
+During our journey of discovering `Pandas`, we have already encountered some geolocated sources, notably produced by INSEE. This institution publishes numerous local statistics, such as the Filosofi data we encountered in the previous chapter. Beyond INSEE, all institutions of the public statistical system (INSEE and ministerial statistical services) publish many aggregated data sources at different geographical scales: sub-municipal level (e.g., [200m tiles](https://www.insee.fr/fr/statistiques/6215138?sommaire=6215217)), municipal level, or supra-municipal levels (administrative or study area zonings).
+
+More generally, many French administrations outside the public statistical system disseminate geographic data on [data.gouv](https://www.data.gouv.fr/fr/). For example, we previously exploited a dataset from ADEME whose geographical dimension was the municipality.
+
+The central player in the French public geographic data ecosystem is [IGN](https://www.ign.fr/). Well known to hiking enthusiasts for its _"Top 25"_ maps, which can be found on the [geoportail](https://www.geoportail.gouv.fr/carte), IGN is also responsible for mapping the legal boundaries of French administrative entities (AdminExpress base), forests (BDForêt), roads (BDRoute), buildings (BDTopo), etc. We briefly mentioned the [`cartiflette`](https://github.com/InseeFrLab/cartiflette) library in the previous chapter, which allows flexible retrieval of administrative map bases (AdminExpress base) with `Python`; we will go further in this chapter.
+
+The public authorities are no longer the only ones producing and disseminating spatial data. Collecting GPS coordinates has become almost automatic, and many actors collect, exploit, and even sell geospatial data on their users. These data can be very precise and rich on certain issues, such as mobility. However, it is necessary to keep in mind when wanting to extrapolate statistics built on these data that they concern users of the specific service, who may not be representative of the behaviors of the population as a whole.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Objectifs de ce chapitre
+
+Ce chapitre illustre à partir d’exemples pratiques certains principes centraux de l’analyse de données :
+
+- Manipulations sur les attributs des jeux de données ;
+- Manipulations géométriques ;
+- Gestion des projections cartographiques ;
+- Création rapide de cartes (ce sera approfondi dans un prochain chapitre).
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Objectives
+
+This chapter illustrates some central principles of data analysis through practical examples:
+
+- Manipulations on the attributes of datasets;
+- Geometric manipulations;
+- Management of cartographic projections;
+- Quick creation of maps (to be explored further in a later chapter).
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Données utilisées dans ce chapitre
+
+Dans ce tutoriel, nous allons utiliser les données suivantes :
+
+* [Localisations des stations velib](https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/download/?format=geojson&timezone=Europe/Berlin&lang=fr) ;
+* [fonds de carte `AdminExpress`](https://geoservices.ign.fr/adminexpress) à
+travers un package `Python` nommé [`cartiflette`](https://github.com/InseeFrLab/cartiflette)
+facilitant la récupération de cette source. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Data
+
+In this chapter, we will use the following data:
+
+* [Free floating bike rents (Vélib) data](https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/download/?format=geojson&timezone=Europe/Berlin&lang=fr);
+* [French administrative design](https://geoservices.ign.fr/adminexpress) through a `Python` package named [`cartiflette`](https://github.com/InseeFrLab/cartiflette) which facilitates the retrieval of this source.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+## Installations préalables
+
+Ce tutoriel nécessite quelques installations de packages
+pour pouvoir être reproduit
+:::
+
+::: {.content-visible when-profile="en"}
+## Preliminary installations
+This tutorial requires some package installations to be reproducible
+:::
+
+::: {#install-dependencies .cell}
+``` {.python .cell-code}
+!pip install pandas fiona shapely pyproj rtree 
+!pip install contextily
+!pip install geopandas
+!pip install topojson
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+Pour être en mesure d'exécuter ce tutoriel, les imports suivants
+seront utiles.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+To be able to run this tutorial, the following imports will be useful.
+
+:::
+
+::: {#load-dependencies .cell}
+``` {.python .cell-code}
+import geopandas as gpd
+import contextily as ctx
+import matplotlib.pyplot as plt
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-warning}
+
+Le package `cartiflette` est expérimental 
+et n'est disponible que sur
+[`Github`](https://github.com/InseeFrLab/cartogether), pas sur `PyPi`.
+Il est amené à évoluer rapidement et cette page sera mise à jour
+quand de nouvelles fonctionalités (notamment l'utilisation d'`API`)
+seront disponibles pour encore simplifier la récupération de
+contours géographiques.
+
+::::
+
+Pour installer `cartiflette`, il est nécessaire d'utiliser les commandes suivantes
+depuis un `Jupyter Notebook` (si vous utilisez la ligne de commande directement,
+vous pouvez retirer les `!` en début de ligne):
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-warning}
+
+The `cartiflette` package is experimental and is only available on
+[`Github`](https://github.com/InseeFrLab/cartogether), not on `PyPi`.
+It is expected to evolve quickly and this page will be updated
+when new functionalities (especially the use of `API`)
+are available to further simplify the retrieval of
+geographic boundaries.
+
+::::
+
+To install `cartiflette`, you need to use the following commands
+from a `Jupyter Notebook` (if you use the command line directly,
+you can remove the `!` at the beginning of the line):
+
+:::
+
+::: {#install-cartiflette .cell}
+``` {.python .cell-code}
+!pip install py7zr geopandas openpyxl tqdm s3fs --quiet
+!pip install PyYAML xlrd --quiet
+!pip install cartiflette --quiet
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+# De `Pandas` à `Geopandas`
+
+Le *package* `Geopandas` est une boîte à outils conçue pour faciliter la manipulation de données spatiales. **La grande force de `Geopandas` est qu'il permet de manipuler des données spatiales comme s'il s'agissait de données traditionnelles**, car il repose sur le standard ISO 19125 [*simple feature access*](https://en.wikipedia.org/wiki/Simple_Features) défini conjointement par l'*Open Geospatial Consortium (OGC)* et l'*International Organization for Standardization (ISO)*. `Geopandas` repose d'une part sur `Pandas` pour le traitement de la dimension tabulaire des données spatiales et d'autre part sur [`Shapely`](https://shapely.readthedocs.io/en/stable/manual.html) et [`GDAL`](https://gdal.org/index.html) pour les manipulations géométriques. Néanmoins, comme `Pandas` permettait de faire du `Numpy` sans le savoir, lorsqu'on travaille avec `Geopandas` on repose sur les deux couches basses que sont `Shapely` et `GDAL` sans avoir à s'embêter. 
+
+Par rapport à un _DataFrame_ standard, un objet `Geopandas` comporte
+une colonne supplémentaire: `geometry`. Elle stocke les coordonnées des
+objets géographiques (ou ensemble de coordonnées s'agissant de contours). Un objet `Geopandas` hérite des propriétés d'un 
+_DataFrame_ `Pandas` mais propose des méthodes adaptées au traitement des données spatiales. Par conséquent, grâce à `GeoPandas`, on a des attributs qui reposent sur le principe de données _tidy_ évoquées dans le [chapitre précédent](content/manipulation/02_pandas_intro.qmd) alors que la géométrie afférante sera gérée de manière cohérente en parallèle des attributs. 
+
+Ainsi, grâce à  `Geopandas`, on pourra effectuer des manipulations sur les attributs des données comme avec `pandas` mais on pourra également faire des manipulations sur la dimension spatiale des données. En particulier,
+
+* Calculer des distances et des surfaces ;
+* Agréger rapidement des zonages (regrouper les communes en département par exemple) ;
+* Trouver dans quelle commune se trouve un bâtiment à partir de ses coordonnées géographiques ;
+* Recalculer des coordonnées dans un autre système de projection ;
+* Faire une carte, rapidement et simplement.
+
+:::: {.callout-tip}
+
+Les manipulations de données sur un objet `Geopandas` sont nettement plus lentes que sur
+un `DataFrame` traditionnel (car `Python` doit gérer les informations géographiques pendant la manipulation des données).
+Lorsque vous manipulez des données de grandes dimensions,
+il peut être préférable d’effectuer les opérations sur les données avant de joindre une géométrie à celles-ci.
+
+::::
+
+Par rapport à un logiciel spécialisé comme `QGIS`, `Python` permettra 
+d'automatiser le traitement et la représentation des données. D'ailleurs,
+`QGIS` utilise lui-même `Python`...
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# From `Pandas` to `Geopandas`
+
+The `Geopandas` package is a toolkit designed to facilitate the manipulation of spatial data. **The great strength of `Geopandas` is that it allows for the manipulation of spatial data as if it were traditional data**, because it is based on the ISO 19125 [*simple feature access*](https://en.wikipedia.org/wiki/Simple_Features) standard defined jointly by the *Open Geospatial Consortium (OGC)* and the *International Organization for Standardization (ISO)*. `Geopandas` relies on `Pandas` for handling the tabular aspect of spatial data and on [`Shapely`](https://shapely.readthedocs.io/en/stable/manual.html) and [`GDAL`](https://gdal.org/index.html) for geometric manipulations. However, just as `Pandas` allows you to use `Numpy` without knowing it, working with `Geopandas` lets you leverage `Shapely` and `GDAL` without having to deal with them directly.
+
+Compared to a standard _DataFrame_, a `Geopandas` object includes an additional column: `geometry`. This column stores the coordinates of geographic objects (or sets of coordinates in the case of boundaries). A `Geopandas` object inherits the properties of a `Pandas` _DataFrame_ but offers methods tailored to the handling of spatial data. Therefore, with `GeoPandas`, you have attributes based on the principle of _tidy_ data discussed in the [previous chapter](content/manipulation/02_pandas_intro.qmd) while the associated geometry is managed consistently alongside the attributes.
+
+Thus, with `Geopandas`, you can perform attribute manipulations as with `pandas`, but you can also manipulate the spatial dimension of the data. Specifically, you can:
+
+* Calculate distances and areas;
+* Aggregate zonings quickly (e.g., grouping municipalities into departments);
+* Find out which municipality a building is located in based on its geographic coordinates;
+* Recalculate coordinates in another projection system;
+* Create a map quickly and easily.
+
+:::: {.callout-tip}
+
+Manipulating data in a `Geopandas` object is significantly slower than in a traditional `DataFrame` (since `Python` has to handle geographic information during data manipulation).
+When working with large datasets, it may be preferable to perform operations on the data before attaching geometry to it.
+
+::::
+
+Compared to specialized software like `QGIS`, `Python` allows for the automation of data processing and visualization. In fact, `QGIS` itself uses `Python`...
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Anatomie d'un objet `GeoPandas`
+
+En résumé, un objet `GeoPandas` comporte les éléments suivants :
+
+![](/content/manipulation/03_geopandas_intro/geopandas-object.png)
+
+1. Les __attributs__. Ce sont les valeurs associées à chaque niveau géographique. 
+Il s'agit de la dimension tabulaire usuelle, dont le traitement est similaire
+à celui d'un objet `Pandas` classique. 
+2. Les __géométries__. Ce sont les valeurs numériques interprétées pour représenter la dimension géographique. Elles permettent de représenter dans un certain
+référentiel (le système de référence) la dimension géographique. 
+3. Le __système de référence__. Il s'agit du système permettant de transformer les positions sur
+le globe (3 dimensions avec une boule asymétrique) en un plan en deux dimensions. 
+Il en existe une multitude, identifiables à partir d'un code EPSG (4326, 2154...). 
+Leur manipulation est facilitée par `Geopandas` qui s'appuie sur `Shapely`, de la même
+manière que `Pandas` s'appuie sur `Numpy` ou `Arrow`. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Anatomy of a `GeoPandas` object
+
+In summary, a `GeoPandas` object consists of the following elements:
+
+![](/content/manipulation/03_geopandas_intro/geopandas-object.png)
+
+1. **Attributes**: These are the values associated with each geographic level. This is the usual tabular dimension, treated similarly to a standard `Pandas` object.
+2. **Geometries**: These are numerical values interpreted to represent the geographic dimension. They allow representation in a specific reference frame (the reference system).
+3. **Reference System**: This system transforms positions on the globe (3D with an asymmetrical sphere) into a 2D plane. There are numerous systems, identifiable by an EPSG code (4326, 2154, etc.). Their manipulation is facilitated by `Geopandas`, which relies on `Shapely`, just as `Pandas` relies on `Numpy` or `Arrow`.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+# Lire et enrichir des données spatiales
+
+Dans le chapitre précédent, nous avons évoqué les formats de données
+plats comme le `CSV` ou les nouveaux formats comme `Parquet`. Ceux-ci
+sont adaptés à des données tabulaires. 
+Pour des données géographiques,
+qui stockent de l'information selon plusieurs dimensions (les attributs
+et la géométrie), il existe des formats spécialisés.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# Reading and enriching spatial data
+
+In the previous chapter, we discussed flat data formats such as `CSV` and newer formats like `Parquet`. These are suitable for tabular data. For geographic data, which store information across multiple dimensions (attributes and geometry), there are specialized formats.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Le format _shapefile_ (`.shp`) et le _geopackage_ (`.gpkg`)
+
+Le format historique de stockage de données spatiales est le _[shapefile](https://fr.wikipedia.org/wiki/Shapefile)_. Il s'agit d'un format propriétaire, développé par ESRI, qui est néanmoins devenu une norme _de facto_. Dans ce format, la donnée est stockée dans plusieurs fichiers: 
+
+- `data.shp` : contient les géométries des entités spatiales (points, lignes, polygones...).
+- `data.shx` : un index pour accéder rapidement aux géométries stockées dans le fichier `.shp`.
+- `data.dbf` : une table attributaire au format dBase qui contient les informations descriptives des entités spatiales.
+- `data.prj` : contient les informations de projection et de système de coordonnées (nous reviendrons sur ce concept ultérieurement).
+
+Ce format présente plusieurs inconvénients. Tout d'abord il est assez volumineux ; certains formats modernes seront plus optimisés pour réduire la volumétrie sur disque et le temps de chargement des données. Surtout, le problème principal du _shapefile_ est que pour lire les données de manière intègre, il est nécessaire de partager de manière systématique ces quatre fichiers, sous peine d'introduire un risque de corruption ou d'incomplétude de la donnée. En faisant `gpd.read_file("data.shp")`, `GeoPandas`
+fait lui-même le lien entre les observations et leur représentation spatiale qui sont présents dans plusieurs fichiers.
+
+Le format `GeoPackage` est un héritier spirituel du _shapefile_ visant à résoudre ces deux limites. Il s'agit d'un format libre recommandé par l'_open geospatial consortium_ (OGC). Les géomaticiens apprécient ce format, il s'agit d'ailleurs du format par défaut de QGIS, le logiciel spécialisé pour les SIG. Néanmoins, même si `GeoPandas` fonctionne bien avec ce format, celui-ci est moins connu par les _data scientists_ que le _shapefile_ ou que le _geojson_ que nous allons décrire par la suite. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Shapefile (`.shp`) and geopackage (`.gpkg`) formats
+
+The historical format for storing spatial data is the [shapefile](https://en.wikipedia.org/wiki/Shapefile). It is a proprietary format developed by ESRI that has become a de facto standard. In this format, data
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Le GeoJSON et le TopoJSON
+
+Le développement d'un format concurrent l'hégémonie du _shapefile_ est intrinsèquement lié à l'émergence des technologies _web_ dans le secteur de la cartographie. Ces technologies web s'appuient sur Javascript et reposent sur les standards du format JSON. 
+
+Le format _GeoJSON_ stocke dans un seul fichier à la fois les attributs et les géométries. Il est donc assez pratique à l'usage et s'est imposé comme le format préféré des développeurs web. Le fait de stocker l'ensemble de l'information dans un seul fichier peut cependant le rendre assez volumineux si les géométries sont très précises, mais le volume reste moindre que celui du _shapefile_. `GeoPandas` est très bien fait pour lire des fichiers au format GeoJSON et les plateformes de partage de données, comme `data.gouv` privilégient ce format à celui du _shapefile_. 
+
+Pour alléger le fichier, le format `TopoJSON` a récémment émergé. Celui-ci est construit selon les mêmes principes que le `GeoJSON` mais réduit le volume de données géométriques stockées en ne conservant pas tous les points en appliquant une simplification pour ne conserver que les arcs et les directions entre ceux-ci. Ce format étant récent, il n'est pas encore bien intégré à l'écosystème `Python`.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## GeoJSON and TopoJSON
+
+The development of a format to rival the hegemony of the shapefile is intrinsically linked to the emergence of web technologies in the cartography sector. These web technologies rely on Javascript and adhere to the JSON format standards.
+
+The GeoJSON format stores both attributes and geometries in a single file. This makes it quite convenient to use and it has become the preferred format among web developers. However, storing all information in one file can make it quite large if the geometries are very detailed, though it is still less bulky than the shapefile. `GeoPandas` is well-equipped to read files in the GeoJSON format, and data-sharing platforms like `data.gouv` favor this format over the shapefile.
+
+To reduce file size, the TopoJSON format has recently emerged. It is built on the same principles as GeoJSON but reduces the volume of stored geometric data by simplifying it, retaining only arcs and directions between points. As this format is new, it is not yet well-integrated into the `Python` ecosystem.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Les autres formats de données
+
+L'écosystème des formats de données géographiques est bien plus éclaté que celui des données structurées. Chaque format présente des avantages qui le rendent intéressant pour un type de données mais des limites qui l'empêchent de devenir un standard pour d'autres types de données. 
+
+Par exemple, les données GPS extraites de diverses applications (par exemple `Strava`) sont stockées au format GPX. Ce dernier est particulièrement adapté pour des traces géolocalisées avec une altitude. Mais ce n'est pas le format le plus approprié pour stocker des lignes directionnelles, un prérequis indispensable pour les applications d'itinéraires. 
+
+Les formats _shapefile_ et _geojson_ sont suffisamment malléables pour s'adapter aux différents types de données géographiques même s'il ne s'agit
+pas du format optimal pour tel ou tel type de données. Dans cette classe généraliste de formats, le `Geoparquet` pourrait être le prochain format à la mode. Comme son nom l'indique, il s'agit d'une extension du format `Parquet` à des données géographiques. Ce format n'est pas encore mûr mais reste à suivre, la masse d'utilisateurs de l'écosystème `Parquet` pouvant amener à un changement rapide si une implémentation stable de `Geoparquet`  émerge. 
+
+Cette [page](https://si.ecrins-parcnational.com/blog/2020-02-geojson-shapefile-geopackage.html) compare plus en détail les principes formats de données géographiques. 
+L'aide de [`Geopandas`](https://geopandas.org/io.html) propose des bouts de code en fonction des différentes situations dans lesquelles on se trouve.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Other data formats
+
+The ecosystem of geographic data formats is much more fragmented than that of structured data. Each format offers advantages that make it suitable for certain types of data but has limitations that prevent it from becoming a standard for other types of data.
+
+For example, GPS data extracted from various applications (e.g., `Strava`) are stored in the GPX format. This format is particularly well-suited for geolocated traces with altitude. However, it is not the most appropriate format for storing directional lines, which are essential for routing applications.
+
+The shapefile and geojson formats are sufficiently versatile to adapt to various types of geographic data, even if they are not the optimal format for every type of data. Within this generalist class of formats, the Geoparquet might be the next trending format. As its name suggests, it is an extension of the Parquet format to geographic data. This format is not yet mature but is worth keeping an eye on, as the large user base of the Parquet ecosystem could lead to a rapid shift if a stable implementation of Geoparquet emerges.
+
+This [page](https://si.ecrins-parcnational.com/blog/2020-02-geojson-shapefile-geopackage.html) provides a more detailed comparison of the main geographic data formats. The help section of [`Geopandas`](https://geopandas.org/io.html) offers code snippets for various situations.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Exercice de découverte
+
+L'objectif de cet exercice est d'illustrer la similarité des objets
+`GeoPandas` avec les objets `Pandas` que nous avons découverts précédemment. 
+
+Nous allons importer directement les données `AdminExpress` (limites officielles des communes produites par l'IGN) avec `cartiflette`:
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## An exercise to discover spatial data
+
+The goal of this exercise is to illustrate the similarity between `GeoPandas` objects and the `Pandas` objects we previously explored.
+
+We will directly import the `AdminExpress` data (official boundaries of municipalities produced by IGN) using `cartiflette`:
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-tip}
+## Exercice 1: découverte des objets géographiques
+
+En premier lieu, on récupère des données géographiques grâce
+au _package_ `cartiflette` et à sa fonction `carti_download`.
+
+1. Utiliser
+le code sous cet exercice (celui utilisant `carti_download`) pour
+télécharger les contours communaux
+des départements de la petite couronne (75, 92, 93 et 94)
+de manière simplifiée grâce au _package_
+`cartiflette`
+
+2. Regarder les premières lignes des données. Identifier la différence avec
+un _dataframe_ standard. 
+
+3. Afficher le système de projection (attribut `crs`) de `communes_borders`. Ce dernier contrôle la
+transformation de l'espace tridimensionnel terrestre en une surface plane.
+Utiliser `to_crs` pour transformer les données en Lambert 93, le 
+système officiel (code EPSG 2154). 
+
+4. Afficher les communes des Hauts de Seine (département 92) et utiliser la méthode
+`plot`
+
+5. Ne conserver que Paris et réprésenter les frontières sur une carte : quel est le problème pour
+une analyse de Paris intramuros?
+
+On remarque rapidement le problème. 
+On ne dispose ainsi pas des limites des arrondissements parisiens, ce
+qui appauvrit grandement la carte de Paris. 
+
+6. Cette fois, utiliser l'argument `borders="COMMUNE_ARRONDISSEMENT"` pour obtenir
+un fonds de carte consolidé des communes avec les arrondissements dans les grandes villes. 
+Convertir en Lambert 93. 
+
+::::
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-tip}
+## Exercise 1: Discovering spatial objects
+
+First, we will retrieve geographic data using the `cartiflette` package and its `carti_download` function.
+
+1. Use the code below to download administrative borders for the departments of the inner suburbs (75, 92, 93, and 94) in a simplified manner using the `cartiflette` package
+
+2. Look at the first few rows of the data. Identify the difference from a standard dataframe.
+
+3. Display the projection system (attribute `crs`) of `communes_borders`. This controls the transformation of the three-dimensional terrestrial space into a flat surface. Use `to_crs` to transform the data into Lambert 93, the official system (EPSG code 2154).
+
+4. Display the municipalities of Hauts de Seine (department 92) and use the `plot` method.
+
+5. Keep only Paris and plot the borders on a map: what is the problem for an analysis of intramural Paris?
+
+You will quickly notice the problem. We do not have the boundaries of Parisian districts, which greatly impoverishes the map of Paris.
+
+6. This time, use the argument `borders="COMMUNE_ARRONDISSEMENT"` to obtain a consolidated map with the municipalities and districts in large cities. Convert to Lambert 93.
+
+::::
+
+:::
+
+::: {#5f290017 .cell}
+``` {.python .cell-code}
+# 1. Chargement des données de Cartiflette
+from cartiflette import carti_download
+communes_borders = carti_download(
+    crs = 4326,
+    values = ["75", "92", "93", "94"],
+    borders="COMMUNE",
+    vectorfile_format="geojson",
+    filter_by="DEPARTEMENT",
+    source="EXPRESS-COG-CARTO-TERRITOIRE",
+    year=2022)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+La visualisation proposée à la question permet de voir que notre _DataFrame_  comporte la colonne _geometry_ qui contient les informations nécessaires pour connaître les contours communaux.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+The visualization provided in the question shows that our `GeoDataFrame` includes a `geometry` column containing the necessary information to determine the municipal boundaries.
+
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+Les données sont en WGS84, on les reprojette en Lambert 93
+:::
+
+::: {.content-visible when-profile="en"}
+The data is in WGS84, we reproject it to Lambert 93
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+A la question 5, on remarque facilement le problème pour Paris: il manque les limites des arrondissements. Cela appauvrit grandement la carte de Paris.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+In question 5, the issue for Paris is easily noticeable: the boundaries of the arrondissements are missing. This significantly reduces the detail of the map of Paris.
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+A l'issue de la question 6, on obtient la carte attendue pour Paris intramuros:
+:::
+
+::: {.content-visible when-profile="en"}
+At the end of question 6, we obtain the expected map for inner Paris:
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+
+# Le système de projection cartographique
+
+## Principe
+
+Les données spatiales sont
+plus riches que les données traditionnelles car elles
+incluent, habituellement, des éléments supplémentaires pour placer dans
+un espace cartésien les objets. Cette dimension supplémentaire peut être simple
+(un point comporte deux informations supplémentaire: $x$ et $y$) ou
+assez complexe (polygones, lignes avec direction, etc.).
+
+L'analyse cartographique emprunte dès lors à la géométrie
+des concepts
+pour représenter des objets dans l'espace. Les __projections__
+sont au coeur de la gestion des données spatiales. 
+Ces dernières consistent à transformer une position dans l'espace
+terrestre à une position sur un plan. Il s'agit donc d'une opération
+de projection d'un espace tri-dimensionnel dans un espace
+à deux dimensions. 
+Ce [post](https://www.earthdatascience.org/courses/earth-analytics/spatial-data-r/geographic-vs-projected-coordinate-reference-systems-UTM/) propose de riches éléments sur le
+sujet, notamment l'image suivante qui montre bien le principe d'une projection :
+
+![Les différents types de projection](https://www.earthdatascience.org/images/courses/earth-analytics/spatial-data/spatial-projection-transformations-crs.png)
+
+
+Cette opération n'est pas neutre. L'une des conséquences du
+[théorème remarquable de Gauss](https://fr.wikipedia.org/wiki/Theorema_egregium)
+est que la surface de la Terre ne peut être cartographiée sans distortion.
+Une projection ne peut simultanément conserver intactes les distances et les 
+angles (i.e. les positions). 
+Il n'existe ainsi pas de projection universellement meilleure, ce qui ouvre
+la porte à la coexistence de nombreuses projections différentes, pensées
+pour des tâches différentes. 
+Un mauvais système de représentation
+fausse l'appréciation visuelle mais peut aussi entraîner des erreurs dans
+les calculs sur la dimension spatiale.
+
+**Les systèmes de projection font l'objet de standards internationaux et sont souvent désignés par des codes dits codes EPSG**. Ce [site](https://epsg.io/) est un bon aide-mémoire. Les plus fréquents, pour les utilisateurs français, sont les suivants (plus d'infos [ici](https://geodesie.ign.fr/contenu/fichiers/documentation/SRCfrance.pdf)) :
+
+* `2154` : système de projection Lambert 93. Il s'agit du système de projection officiel. La plupart des données diffusées par l'administration pour la métropole sont disponibles dans ce système de projection. 
+* `27572` : Lambert II étendu. Il s'agit de l'ancien système de projection officiel. Les données spatiales anciennes peuvent être dans ce format.
+* `4326` : WGS 84 ou système de pseudo-Mercator Ce n'est en réalité pas un système de projection mais un système de coordonnées (longitude / latitude) qui permet simplement un repérage angulaire sur l'ellipsoïde. Il est utilisé pour les données GPS. Il s'agit du système le plus
+usuel, notamment quand on travaille avec des fonds de carte _web_.
+
+
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# The coordinate reference system (CRS)
+
+## Principle
+
+Spatial data is richer than traditional data because it usually includes additional elements to place objects in a Cartesian space. This additional dimension can be simple (a point has two additional pieces of information: $x$ and $y$) or quite complex (polygons, lines with direction, etc.).
+
+Cartographic analysis, therefore, borrows concepts from geometry to represent objects in space. **Projections** are at the heart of managing spatial data. These projections consist of transforming a position in terrestrial space into a position on a plane. This is a projection operation from a three-dimensional space into a two-dimensional space. This [post](https://www.earthdatascience.org/courses/earth-analytics/spatial-data-r/geographic-vs-projected-coordinate-reference-systems-UTM/) offers rich elements on the subject, including the following image that clearly shows the principle of a projection:
+
+![Different types of projection](https://www.earthdatascience.org/images/courses/earth-analytics/spatial-data/spatial-projection-transformations-crs.png)
+
+This operation is not neutral. One of the consequences of the [remarkable theorem of Gauss](https://en.wikipedia.org/wiki/Theorema_egregium) is that the surface of the Earth cannot be mapped without distortion. A projection cannot simultaneously keep distances and angles intact (i.e., positions). Thus, there is no universally better projection, which opens the door to the coexistence of many different projections, designed for different tasks. A poor projection system can distort visual appreciation and also cause errors in calculations on the spatial dimension.
+
+**Projection systems are subject to international standards and are often designated by so-called EPSG codes**. This [site](https://epsg.io/) is a good reference. The most common for French users are as follows (more info [here](https://geodesie.ign.fr/contenu/fichiers/documentation/SRCfrance.pdf)):
+
+* `2154`: Lambert 93 projection system. This is the official projection system. Most data published by the administration for the metropolis is available in this projection system.
+* `27572`: Lambert II extended. This is the former official projection system. Older spatial data may be in this format.
+* `4326`: WGS 84 or pseudo-Mercator system or _Web Mercator_. This is not actually a projection system but a coordinate system (longitude/latitude) that simply allows angular positioning on the ellipsoid. It is used for GPS data. This is the most common system, especially when working with web map backgrounds.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Le système Mercator
+
+Comme évoqué plus haut, l’une des projections les plus connues est la projection Web Mercator (code EPSG 3857), qui projète sur les cartes planes les données sphériques de longitude, latitude issues du système WGS84 (EPSG 4326), qui est le système géodésique utilisé par le [GNSS](https://en.wikipedia.org/wiki/Satellite_navigation) américain [**GPS**](https://en.wikipedia.org/wiki/Global_Positioning_System), utilisé par l'immense majorité des systèmes de navigation mondiaux, et a fortiori Google Maps. Il 
+s'agit d'une projection conservant intacte les angles, ce
+qui implique qu'elle altère les distances. Celle-ci a en effet été
+pensée, à l'origine, pour représenter l'hémisphère Nord. Plus
+on s'éloigne de celui-ci, plus les distances sont distordues. Cela
+amène à des distorsions bien
+connues (le Groenland hypertrophié, l'Afrique de taille réduite, l'Antarctique démesuré...).
+En revanche, la projection Mercator conserve intacte les positions. 
+C'est cette propriété qui explique son utilisation dans les systèmes
+GPS et ainsi dans les fonds de carte de navigation du type _Google Maps_. 
+Il s'agit d'une projection pensée d'abord pour la navigation, non pour la représentation d'informations socioéconomiques sur la terre. Cette projection est indissociable des grandes explorations de la Renaissance, comme le rappelle [ce fil](https://x.com/JulesGrandin/status/1765668642094514447) sur Twitter de Jules Grandin.
+
+![*Exemple de reprojection de pays depuis le site [thetruesize.com](https://thetruesize.com/)*](https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/truesize.png)
+
+!["Don't trust the Mercator projection" sur `Reddit`](https://rgeo.linogaliana.fr/exercises/img/mercator.jpg){#fig-mercator-funny}
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## The Mercator System
+
+As mentioned above, one of the best-known projections is the Web Mercator projection (EPSG code 3857), which projects spherical longitude and latitude data from the WGS84 system (EPSG 4326) onto flat maps. This is the geodetic system used by the American [GNSS](https://en.wikipedia.org/wiki/Satellite_navigation) [**GPS**](https://en.wikipedia.org/wiki/Global_Positioning_System), which is used by the vast majority of global navigation systems, let alone Google Maps. This projection preserves angles, which means it distorts distances. It was originally designed to represent the Northern Hemisphere. The farther you move away from it, the more distances are distorted. This leads to well-known distortions (Greenland being oversized, Africa reduced in size, Antarctica being immense, etc.). However, the Mercator projection keeps positions intact. This property explains its use in GPS systems and navigation map backgrounds like _Google Maps_. It is a projection primarily designed for navigation, not for representing socio-economic information on Earth. This projection is inseparable from the great explorations of the Renaissance, as highlighted by [this Twitter thread](https://x.com/JulesGrandin/status/1765668642094514447) by Jules Grandin.
+
+![*Example of country re-projection from the site [thetruesize.com](https://thetruesize.com/)*](https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/truesize.png)
+
+!["Don't trust the Mercator projection" on `Reddit`](https://rgeo.linogaliana.fr/exercises/img/mercator.jpg){#fig-mercator-funny}
+
+:::
+
+
+::: {.content-visible when-format="html"}
+
+:::: {.content-visible when-profile="fr"}
+
+Observez les variations significatives
+de proportions pour certains pays selon les projections
+choisies:
+
+::::
+
+:::: {.content-visible when-profile="en"}
+
+Notice the significant variations in proportions for certain countries depending on the chosen projections:
+
+::::
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-1 nodetype="expression"}
+:::
+::::
+:::::
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-2 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-3 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+::::::{.cell}
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-4-1 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::::{.cell-output .cell-output-display}
+
+::::{}
+
+:::{#ojs-cell-4-2 nodetype="declaration"}
+:::
+::::
+:::::
+::::::
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-5 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-6 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+Pour aller plus loin, la carte interactive
+suivante, construite par Nicolas Lambert, issue de
+ce [_notebook_ `Observable`](https://observablehq.com/@neocartocnrs/impact-of-projections-on-areas), illustre l'effet
+déformant de la projection Mercator, et de quelques-unes autres,
+sur notre perception de la taille des pays.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+To go further, the following interactive map, created by Nicolas Lambert and derived from this [_Observable notebook_](https://observablehq.com/@neocartocnrs/impact-of-projections-on-areas), illustrates the distorting effect of the Mercator projection, among others, on our perception of country sizes.
+
+:::
+
+::: {.content-visible when-format="html"}
+
+<details>
+<summary>
+Voir la carte interactive
+</summary>
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-7 nodetype="expression"}
+:::
+::::
+:::::
+
+</details>
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-8 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+Il existe en fait de nombreuses représentations possibles du monde, plus ou moins 
+alambiquées. Les projections sont très nombreuses et certaines peuvent avoir une [forme suprenante](https://imgs.xkcd.com/comics/map_projections.png).
+Par exemple,
+la [projection de Spillhaus](https://storymaps.arcgis.com/stories/756bcae18d304a1eac140f19f4d5cb3d)
+propose de centrer la vue sur les océans et non une terre. C'est pour
+cette raison qu'on parle parfois de monde tel que vu par les poissons
+à son propos.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+There are actually many possible representations of the world, some more intricate than others. Projections are numerous, and some can have [surprising shapes](https://imgs.xkcd.com/comics/map_projections.png). For example, the [Spilhaus projection](https://storymaps.arcgis.com/stories/756bcae18d304a1eac140f19f4d5cb3d) proposes centering the view on the oceans rather than land. That's why it is sometimes referred to as the world as seen by fish.
+
+:::
+
+
+::: {.content-visible when-format="html"}
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-9 nodetype="expression"}
+:::
+::::
+:::::
+
+
+
+:::::{.cell layout-align="center"}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-10 nodetype="declaration"}
+:::
+::::
+:::::
+
+
+
+:::::{.cell}
+
+::::{.cell-output .cell-output-display}
+
+:::{#ojs-cell-11 nodetype="declaration"}
+:::
+::::
+:::::
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-tip}
+## Astuce pour la France
+
+Pour la France, dans le système WGS84 (4326) :
+
+- Longitude ($x$) tourne autour de 0° (de -5.2 à +9.6 pour être plus précis)
+- La latitude  ($y$) autour de 45 (entre +41.3 à +51.1)
+
+Dans le système Lambert 93 (2154) :
+
+- Coordonnées $x$:  entre 100 000 et 1 300 000
+- La latitude  ($y$): entre 6 000 000 et 7 200 000
+
+[Plus de détails](https://medium.com/@_FrancoisM/introduction-%C3%A0-la-manipulation-de-donn%C3%A9es-cartographiques-23b4e38d8f0f)
+
+::::
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-tip}
+## Tip for France
+
+For France, in the WGS84 system (4326):
+
+- Longitude ($x$) revolves around 0° (from -5.2 to +9.6 to be precise)
+- Latitude ($y$) around 45 (between +41.3 and +51.1)
+
+In the Lambert 93 system (2154):
+
+- Coordinates $x$: between 100,000 and 1,300,000
+- Latitude ($y$): between 6,000,000 and 7,200,000
+
+[More details](https://medium.com/@_FrancoisM/introduction-%C3%A0-la-manipulation-de-donn%C3%A9es-cartographiques-23b4e38d8f0f)
+
+::::
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+## Gestion avec `GeoPandas`
+
+Concernant la gestion des projections avec `GeoPandas`,
+la [documentation officielle](https://geopandas.org/projections.html) est très bien
+faite. Elle fournit notamment l'avertissement suivant qu'il est
+bon d'avoir en tête :
+
+> Be aware that most of the time you don’t have to set a projection. Data loaded from a reputable source (using the geopandas.read_file() command) should always include projection information. You can see an objects current CRS through the GeoSeries.crs attribute.
+> 
+> From time to time, however, you may get data that does not include a projection. In this situation, you have to set the CRS so geopandas knows how to interpret the coordinates.
+
+![*Image empruntée à XKCD <https://xkcd.com/2256/> qu'on peut également trouver sur <https://blog.chrislansdown.com/2020/01/17/a-great-map-projection-joke/>*](https://imgs.xkcd.com/comics/bad_map_projection_south_america.png)
+
+Les deux principales méthodes pour définir le système de projection utilisé sont :
+
+* **`df.set_crs`** : cette commande sert à préciser quel est le système de projection utilisé, c'est-à-dire comment les coordonnées *(x,y)* sont reliées à la surface terrestre. **Cette commande ne doit pas être utilisée pour transformer le système de coordonnées, seulement pour le définir**. 
+* **`df.to_crs`** : **cette commande sert à projeter les points d'une géométrie dans une autre, c'est-à-dire à recalculer les coordonnées selon un autre système de projection.** 
+
+Dans le cas particulier de production de carte avec un fond `OpenStreetMaps` ou une carte dynamique `leaflet`, il est nécessaire de dé-projeter les données (par exemple à partir du Lambert-93) pour atterrir dans le système non-projeté WGS 84 (code EPSG 4326). Ce site [dédié aux projections géographiques](https://epsg.io/) peut être utile pour retrouver le système de projection d'un fichier où il n'est pas indiqué. 
+
+Le prochain exercice permettra, avec quelques cas pathologiques, de se convaincre de l'importance de déléguer le plus possible la gestion du système de projection à `GeoPandas`. La question n'est pas que sur la pertinence de la représentation des objets géographiques sur la carte. En effet, l'ensemble des opérations géométriques (calculs d'aires, de distance, etc.) peut être affecté par les choix faits sur le système de projection. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Handling with `GeoPandas`
+
+Regarding the management of projections with `GeoPandas`, the [official documentation](https://geopandas.org/projections.html) is very well done. It provides the following warning that is good to keep in mind:
+
+> Be aware that most of the time you don’t have to set a projection. Data loaded from a reputable source (using the geopandas.read_file() command) should always include projection information. You can see an object's current CRS through the GeoSeries.crs attribute.
+> 
+> From time to time, however, you may get data that does not include a projection. In this situation, you have to set the CRS so geopandas knows how to interpret the coordinates.
+
+![*Image borrowed from XKCD <https://xkcd.com/2256/> which can also be found on <https://blog.chrislansdown.com/2020/01/17/a-great-map-projection-joke/>*](https://imgs.xkcd.com/comics/bad_map_projection_south_america.png)
+
+The two main methods for defining the projection system used are:
+
+* **`df.set_crs`**: This command is used to specify what projection system is used, i.e., how the coordinates *(x,y)* are related to the Earth's surface. **This command should not be used to transform the coordinate system, only to define it**.
+* **`df.to_crs`**: **This command is used to project the points of a geometry into another, i.e., to recalculate the coordinates according to another projection system**.
+
+In the specific case of producing a map with an OpenStreetMaps background or a dynamic leaflet map, it is necessary to de-project the data (for example from Lambert-93) to land in the unprojected WGS 84 system (code EPSG 4326). This site [dedicated to geographic projections](https://epsg.io/) can be useful for finding the projection system of a file where it is not indicated.
+
+The next exercise will help convince you of the importance of delegating as much of the projection system management as possible to `GeoPandas`. The issue is not only about the relevance of the representation of geographic objects on the map. Indeed, all geometric operations (area calculations, distance, etc.) can be affected by the choices made regarding the projection system.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Exercice pour comprendre l'importance du système de projection
+
+Voici un code utilisant encore
+`cartiflette` 
+pour récupérer les frontières françaises (découpées par région):
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Exercise to understand how important a projection system can be
+
+Here is some code using `cartiflette` again to retrieve French borders (divided by region):
+
+:::
+
+::: {#load-france-data .cell}
+``` {.python .cell-code}
+from cartiflette import carti_download
+france = carti_download(
+      values = ["France"],
+      crs = 4326,
+      borders = "REGION",
+      vectorfile_format="geojson",
+      simplification=50,
+      filter_by="FRANCE_ENTIERE",
+      source="EXPRESS-COG-CARTO-TERRITOIRE",
+      year=2022)
+france = france.loc[france['INSEE_REG']>10]
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-tip}
+## Exercice 2 : Les projections, représentations et approximations
+
+
+1. S'amuser à représenter les limites de la France avec plusieurs projections:
+
+- Mercator WGS84 (EPSG: 4326)
+- Projection healpix (`+proj=healpix +lon_0=0 +a=1`)
+- Projection prévue pour Tahiti (EPSG: 3304)
+- Projection Albers prévue pour Etats-Unis (EPSG: 5070)
+
+2. Calculer la superficie en $km^2$
+des régions françaises dans les deux systèmes de projection suivants : 
+World Mercator WGS84 (EPSG: 3395) et Lambert 93 (EPSG: 2154). Calculer la différence en $km^2$
+pour chaque région.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-tip}
+## Exercise 2: Projections, representations, and approximations
+
+1. Experiment with representing the borders of France using several projections:
+
+- Mercator WGS84 (EPSG: 4326)
+- Healpix projection (`+proj=healpix +lon_0=0 +a=1`)
+- Projection for Tahiti (EPSG: 3304)
+- Albers projection for the United States (EPSG: 5070)
+
+2. Calculate the area in $km^2$ of the French regions in the following two projection systems:
+World Mercator WGS84 (EPSG: 3395) and Lambert 93 (EPSG: 2154). Calculate the difference in $km^2$ for each region.
+
+::::
+:::
+
+
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+
+Avec la question 1 illustrant quelques cas pathologiques,
+on comprend que les projections ont un effet déformant
+qui se voit bien lorsqu'on les représente côte à côte sous
+forme de cartes :
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+With question 1 illustrating some pathological cases,
+we understand that projections have a distorting effect
+which is clearly visible when we represent them side by side in the form of maps:
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+Cependant le problème n'est pas que visuel, il est également
+numérique. Les calculs géométriques amènent à des différences
+assez notables selon le système de référence utilisé.
+
+On peut représenter ces approximations sur une carte[^notecarte] pour se faire une idée des régions où l'erreur de mesure est la plus importante (objet de la question 2).
+
+[^notecarte]: Cette carte n'est pas trop soignée, c'est normal nous verrons comment
+faire de belles cartes ultérieurement.
+
+
+
+Ce type d'erreur de mesure est normal à l'échelle du territoire français. 
+Les projections héritères du Mercator déforment les distances,
+surtout lorsqu'on se rapproche de l'équateur ou des pôles. 
+
+Il faut donc systématiquement
+repasser les données dans le système de projection Lambert 93 (le
+système officiel pour la métropole) avant d'effectuer des calculs géométriques.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+However, the problem is not just visual; it is also numerical. Geometric calculations lead to quite notable differences depending on the reference system used.
+
+We can represent these approximations on a map[^notecarte] to get an idea of the regions where the measurement error is the greatest (subject of question 2).
+
+[^notecarte]: This map is not too neat; it's normal. We will see how to make beautiful maps later.
+
+
+
+This type of measurement error is normal at the scale of the French territory.
+Projections inherited from Mercator distort distances,
+especially when approaching the equator or the poles.
+
+Therefore, it is always necessary to
+reproject the data into the Lambert 93 system (the
+official system for mainland France) before performing geometric calculations.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+# Importer et explorer les jeux de données spatiaux
+
+Souvent, le découpage communal ne sert qu'en fond de cartes, pour donner des
+repères. En général, il sert donc à contextualiser un autre jeu de données. 
+
+Pour illustrer cette approche, on va partir des données de localisation et de capacités des
+stations velib, 
+disponibles [sur le site d'open data de la ville de Paris](https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/table/) et 
+requêtables directement par l'url
+<https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/download/?format=geojson&timezone=Europe/Berlin&lang=fr>. Ce jeu de données nous permettra d'illustrer quelques enjeux classiques de l'analyse de données spatiales
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# Import and explore spatial datasets
+
+Often, the communal division serves only as a background for maps, providing context and reference points. Generally, it is used to contextualize another dataset.
+
+To illustrate this approach, we will use the data on the locations and capacities of Vélib stations, available on the [open data site of the city of Paris](https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/table/), and directly queryable via the URL <https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/download/?format=geojson&timezone=Europe/Berlin&lang=fr>. This dataset will help us illustrate some classic issues in spatial data analysis.
+
+:::
+
+::: {#load-velib .cell}
+``` {.python .cell-code}
+velib_data = 'https://opendata.paris.fr/explore/dataset/velib-emplacement-des-stations/download/?format=geojson&timezone=Europe/Berlin&lang=fr'
+stations = gpd.read_file(velib_data)
+stations.head(2)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Localiser les données sur une carte
+
+La première étape, avant l'exploration approfondie des données, consiste à afficher celles-ci sur une carte contextuelle, afin de s'assurer de l'emprise géographique des données. 
+Dans notre cas, cela nous donnera une intuition sur la localisation des stations et notamment la densité hétérogène de celles-ci dans l'espace urbain parisien. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Locate data on a map
+
+The first step, before thoroughly exploring the data, is to display it on a contextual map to ensure the geographic coverage of the data. In our case, this will give us an intuition about the locations of the stations, particularly their uneven density in the Parisian urban space.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Exercice d'application
+
+Dans le prochain exercice, nous proposons de créer rapidement une 
+carte comprenant trois couches :
+
+- Les localisations de stations sous forme de points ;
+- Les bordures des communes et arrondissements pour contextualiser ;
+- Les bordures des départements en traits plus larges pour contextualiser également. 
+
+Nous irons plus loin dans le travail cartographique dans le prochain
+chapitre. Mais être en mesure de positionner rapidement
+ses données sur une carte est
+toujours utile dans un travail exploratoire. 
+
+En amont de l'exercice,
+utiliser la fonction suivante du _package_ `cartiflette` pour récupérer
+le fonds de carte des départements de la petite couronne:
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Application
+
+In the next exercise, we propose to quickly create a map with three layers:
+
+- The locations of stations as points;
+- The borders of communes and arrondissements for context;
+- The borders of departments with wider lines for additional context.
+
+We will delve deeper into cartographic work in the next chapter. However, being able to quickly position your data on a map is always useful in exploratory work.
+
+Before the exercise, use the following function from the `cartiflette` package to retrieve the base map of the departments of the inner suburbs:
+
+:::
+
+::: {#load-idf .cell}
+``` {.python .cell-code}
+idf = carti_download(
+      values = ["11"],
+      crs = 4326,
+      borders = "DEPARTEMENT",
+      vectorfile_format="geojson",
+      filter_by="REGION",
+      source="EXPRESS-COG-CARTO-TERRITOIRE",
+      year=2022)
+
+petite_couronne_departements = (
+  idf
+  .loc[idf['INSEE_DEP'].isin(["75","92","93","94"])]
+  .to_crs(2154)
+)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+## Exercice 3: importer et explorer les données velib
+
+On commence par récupérer les données nécessaires à la production
+de cette carte.
+
+1. Vérifier la projection géographique de `station` (attribut `crs`). Si celle-ci est différente des données communales, reprojeter ces
+dernières dans le même système de projection que les stations de vélib
+2. Ne conserver que les 50 principales stations (variable `capacity`)
+
+On peut maintenant construire la carte de manière séquentielle avec la méthode `plot` en s'aidant de [cette documentation](https://geopandas.org/en/stable/docs/user_guide/mapping.html#maps-with-layers)
+
+3. En premier lieu, grâce à `boundary.plot`, 
+représenter la couche de base des limites des communes et arrondissements:
+    + Utiliser les options `edgecolor = "black"` et `linewidth = 0.5`
+    + Nommer cet objet `base`
+
+4. Ajouter la couche des départements avec les options `edgecolor = "blue"` et `linewidth = 0.7`
+
+5. Ajouter les positions des stations
+et ajuster la taille en fonction de la variable `capacity`. L'esthétique des points obtenus peut être contrôlé grâce aux options `color = "red"` et `alpha = 0.4`.
+
+6. Retirer les axes et ajouter un titre avec les options ci-dessous:
+
+```python
+base.set_axis_off()
+base.set_title("Les 50 principales stations de Vélib")
+```
+
+7. En suivant le modèle suivant, grâce au _package_ `contextily`, ajouter un fond de carte contextuel _openstreetmap_
+
+```python
+import contextily as ctx
+ax = ...
+ctx.add_basemap(ax, source = ctx.providers.OpenStreetMap.Mapnik)
+```
+
+⚠️ `contextily` attend des données dans le système de représentation _Pseudo Mercator_ ([EPSG: 3857](https://epsg.io/3857)), il sera donc nécessaire de reprojeter vos données avant de réaliser la carte.
+
+
+::::
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-tip}
+## Exercise 3: Import and explore the Velib data
+
+Let's start by retrieving the data needed to produce this map.
+
+1. Check the geographic projection of `station` (attribute `crs`). If it is different from the commune data, reproject the latter to the same projection system as the Velib stations.
+2. Keep only the top 50 stations (variable `capacity`).
+
+We can now build the map sequentially using the `plot` method, with the help of [this documentation](https://geopandas.org/en/stable/docs/user_guide/mapping.html#maps-with-layers).
+
+3. First, use `boundary.plot` to represent the base layer of commune and arrondissement boundaries:
+    + Use the options `edgecolor = "black"` and `linewidth = 0.5`
+    + Name this object `base`
+
+4. Add the layer of departments with the options `edgecolor = "blue"` and `linewidth = 0.7`.
+
+5. Add the positions of the stations and adjust the size according to the `capacity` variable. The aesthetics of the obtained points can be controlled with the options `color = "red"` and `alpha = 0.4`.
+
+6. Remove the axes and add a title with the options below:
+
+```python
+base.set_axis_off()
+base.set_title("The 50 main Velib stations")
+```
+
+7. Following the model below, use the `contextily` package to add a contextual OpenStreetMap base map:
+
+```python
+import contextily as ctx
+ax = ...
+ctx.add_basemap(ax, source = ctx.providers.OpenStreetMap.Mapnik)
+```
+
+⚠️ `contextily` expects data in the Pseudo Mercator representation system ([EPSG: 3857](https://epsg.io/3857)), so it will be necessary to reproject your data before creating the map.
+
+::::
+
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+La couche de base obtenue à l'issue de la question 3
+:::
+
+::: {.content-visible when-profile="en"}
+The base layer obtained after question 3
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Puis en y ajoutant les limites départementales (question 4).
+:::
+
+::: {.content-visible when-profile="en"}
+Then by adding the departmental boundaries (question 4).
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Puis les stations (question 5).
+:::
+
+::: {.content-visible when-profile="en"}
+Then the stations (question 5).
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Ensuite, si on retire les axes (question 6), on obtient:
+:::
+
+::: {.content-visible when-profile="en"}
+Next, if we remove the axes (question 6), we get:
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+
+La carte est déjà parlante en soi. Néanmoins, pour des personnes moins familières de la géographie parisienne, elle pourrait être encore plus limpide avec l'ajout d'un fond de carte contextuel _openstreetmap_. _In fine_, cela donne la carte suivante:
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+The map speaks for itself. However, for those less familiar with Parisian geography, it could be made even clearer with the addition of a contextual background map _openstreetmap_. In fine, this results in the following map:
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+## Opérations sur les géométries
+
+Outre la représentation graphique simplifiée,
+l'intérêt principal d'utiliser
+`GeoPandas` est l'existence de méthodes efficaces pour
+manipuler la dimension spatiale. Un certain nombre proviennent du 
+package
+[`Shapely`](https://shapely.readthedocs.io/en/latest/manual.html#general-attributes-and-methods). 
+
+Nous avons déjà vu la méthode `to_crs` pour reprojeter les données de manière vectorisée sans avoir à s'inquiéter. 
+Nous avons également évoqué la méthode `area`
+pour calculer des surfaces. Il en existe de nombreuses et l'objectif de ce chapitre n'est pas d'être exhaustif sur le sujet mais plutôt de servir d'introduction générale pour amener à approfondir ultérieurement. 
+Parmi les méthodes les plus utiles, on peut citer `centroid` qui, comme son nom l'indique,
+recherche le centroïde de chaque polygone et transforme ainsi des données
+surfaciques en données ponctuelles. Par exemple, pour
+représenter approximativement les centres des villages de la
+Haute-Garonne (31), après avoir téléchargé le fonds de carte adapté, on
+fera
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Geometric operations
+
+In addition to simplified graphical representation, the main advantage of using `GeoPandas` is the availability of efficient methods for manipulating spatial dimensions. Many of these methods come from the package [`Shapely`](https://shapely.readthedocs.io/en/latest/manual.html#general-attributes-and-methods).
+
+We have already seen the `to_crs` method for reprojecting data vectorized without worrying. We have also mentioned the `area` method to calculate areas. There are many such methods, and the goal of this chapter is not to be exhaustive but to serve as a general introduction to delve deeper later. Among the most useful methods, we can mention `centroid`, which, as its name suggests, finds the centroid of each polygon, thus transforming surface data into point data. For example, to roughly represent the centers of villages in Haute-Garonne (31), after downloading the appropriate base map, we will do the following:
+
+:::
+
+::: {#be2ca6de .cell}
+``` {.python .cell-code}
+from cartiflette import carti_download
+communes_31 = carti_download(
+      values = ["31"],
+      crs = 4326,
+      borders="COMMUNE",
+      vectorfile_format="geojson",
+      filter_by="DEPARTEMENT",
+      source="EXPRESS-COG-CARTO-TERRITOIRE",
+      year=2022)
+
+# on reprojete en 3857 pour le fond de carte
+communes_31 = communes_31.to_crs(3857)
+
+# on calcule le centroide
+dep_31 = communes_31.copy()
+communes_31['geometry'] = communes_31['geometry'].centroid
+
+ax = communes_31.plot(figsize = (10,10), color = 'red', alpha = 0.4, zorder=2)
+dep_31.to_crs(3857).plot(
+  ax = ax, zorder=1,
+  edgecolor = "black",
+  facecolor="none", color = None
+)
+#ctx.add_basemap(ax, source = ctx.providers.Stamen.Toner)
+ax.set_axis_off()
+ax
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+Par conséquent, avec `Geopandas`, l'ensemble de la grammaire `Pandas` peut être mobilisée pour traiter la dimension attributaire des données alors que la dimension géographique pourra être manipulée avec des méthodes adaptées.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+Therefore, with `Geopandas`, the entire `Pandas` grammar can be used to process the attribute dimension of the data while the geographic dimension can be manipulated with appropriate methods.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+# Enrichissements grâce à la dimension spatiale: les jointures spatiales 
+
+## Principe
+
+La carte précédente illustre déjà la puissance de la représentation cartographique. En quelques lignes de code, avec très peu d'opérations sur nos données, on comprend déjà mieux le phénomène qu'on désire observer. En l'occurrence, on détecte très clairement une structure centre-périphérie dans nos données, ce qui n'est pas surprenant mais qu'il est rassurant de retrouver au premier abord.
+
+On remarque également que les stations les plus utilisées, à l'extérieur de l'hypercentre parisien, sont généralement situées sur les grands axes ou à proximité des parcs. Là encore, rien de surprenant mais il est rassurant de retrouver ceci dans nos données. 
+
+On peut maintenant explorer de manière plus approfondie la structure de notre jeu de données. Cependant si on observe celui-ci, on remarque qu'on a peu d'informations dans le jeu de données brutes
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+# Enrichments through the spatial dimension: spatial joins
+
+## Principle
+
+The previous map already illustrates the power of cartographic representation. With just a few lines of code and minimal operations on our data, we already gain a better understanding of the phenomenon we wish to observe. Specifically, we clearly detect a center-periphery structure in our data, which is not surprising but reassuring to find at first glance.
+
+We also notice that the most used stations, outside of the hypercenter of Paris, are generally located on major roads or near parks. Again, nothing surprising, but it is reassuring to see this in our data.
+
+Now, we can explore the structure of our dataset more thoroughly. However, if we look at it, we notice that we have limited information in the raw dataset.
+
+:::
+
+::: {#visualise-before-spatial-joins .cell}
+``` {.python .cell-code}
+stations.head(2)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+Dans le chapitre précédent, nous avons présenté la manière dont l'association de jeux de données par une dimension commune permet d'accroître la valeur de celles-ci. En l'occurrence, il s'agissait d'appariements de données sur la base d'informations communes dans les deux jeux de données.
+
+Nous avons maintenant une information supplémentaire implicite dans nos deux de données: la dimension géographique. On parle de jointure spatiale pour désigner l'association de jeux de données sur la dimension géographique. Il existe de nombreux types différents de jointures spatiales: trouver des points dans un polygone, trouver l'intersection entre plusieurs aires, relier un point à son plus proche voisin dans une autre source, etc. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+In the previous chapter, we presented how associating datasets through a common dimension can enhance their value. In that case, it involved matching data based on common information in both datasets.
+
+Now we have an additional implicit information in our two datasets: the geographical dimension. Spatial join refers to the association of datasets based on the geographical dimension. There are many different types of spatial joins: finding points within a polygon, finding intersections between multiple areas, linking a point to its nearest neighbor in another source, etc.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+## Exemple: localiser les stations dans leur arrondissement
+
+Dans cet exercice, on va supposer que :
+
+- les localisations des stations `velib` 
+sont stockées dans un _dataframe_ nommé `stations`
+- les données administratives
+sont dans un _dataframe_ nommé `petite_couronne`.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Example: locating stations in their neighborhood
+
+In this exercise, we will assume that:
+
+- The locations of the `velib` stations are stored in a dataframe named `stations`.
+- The administrative data is in a dataframe named `petite_couronne`.
+
+:::
+
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-tip}
+## Exercice 4: Associer les stations aux communes et arrondissements auxquels elles appartiennent
+
+
+1. Faire une jointure spatiale pour enrichir les données de stations en y ajoutant des informations de `petite_couronne`. Appeler cet objet `stations_info`.
+2. Compter le nombre de stations et la taille médiane des stations par arrondissements
+2. Créer les objets `stations_19e` et `arrondissement_19e` pour stocker, respectivement, 
+les stations appartenant au 19e et les limites de l'arrondissement.
+2. Compter le nombre de stations velib et le nombre de places velib par arrondissement ou commune. Représenter sur une carte chacune des informations
+2. Représenter la carte des stations du 19e arrondissement avec le code suivant :
+
+```python
+base = petite_couronne.loc[petite_couronne['INSEE_DEP']=="75"].boundary.plot(edgecolor = "k", linewidth=0.5)
+arrondissement_19e.boundary.plot(ax = base, edgecolor = "red", linewidth=0.9)
+stations_19.plot(ax = base, color = "red", alpha = 0.4)
+base.set_axis_off()
+base.set_title("Les stations Vélib du 19e arrondissement")
+base
+```
+
+En reprenant les exemples précédents, ne représenter que le 19e et ajouter un fond de carte _openstreetmap_ pour mieux localiser les stations. 
+
+4. Représenter les mêmes informations mais en densité (diviser par la surface de l'arrondissement ou commune en km2)
+
+::::
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+:::: {.callout-tip}
+## Exercise 4: Associate Stations with Their Corresponding Communes and Arrondissements
+
+1. Perform a spatial join to enrich the station data by adding information from `petite_couronne`. Call this object `stations_info`.
+2. Count the number of stations and the median size of the stations by arrondissement.
+3. Create the objects `stations_19e` and `arrondissement_19e` to store, respectively, the stations belonging to the 19th arrondissement and the boundaries of the arrondissement.
+4. Count the number of velib stations and the number of velib spots by arrondissement or commune. Represent each of these pieces of information on a map.
+5. Represent the map of stations in the 19th arrondissement with the following code:
+
+```python
+base = petite_couronne.loc[petite_couronne['INSEE_DEP']=="75"].boundary.plot(edgecolor = "k", linewidth=0.5)
+arrondissement_19e.boundary.plot(ax = base, edgecolor = "red", linewidth=0.9)
+stations_19.plot(ax = base, color = "red", alpha = 0.4)
+base.set_axis_off()
+base.set_title("Les stations Vélib du 19e arrondissement")
+base
+```
+
+Following the previous examples, only represent the 19th arrondissement and add an openstreetmap background to better locate the stations.
+
+6. Represent the same information but in density (divide by the surface area of the arrondissement or commune in km²).
+
+::::
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+A l'issue de la jointure spatiale, le jeu de données présente la structure suivante
+:::
+::: {.content-visible when-profile="en"}
+After the spatial join, the dataset presents the following structure:
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+On peut donc calculer des statistiques par arrondissement, comme on le ferait avec un `DataFrame Pandas` (question 2):
+:::
+::: {.content-visible when-profile="en"}
+We can therefore calculate statistics by district, just as we would with a `Pandas DataFrame` (question 2):
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+Néanmoins des cartes seront sans doute plus parlante. Pour commencer, avec la question 3, on peut représenter les stations du 19e arrondissement, d'abord dans l'ensemble de Paris.
+:::
+::: {.content-visible when-profile="en"}
+However, maps will probably be more illustrative. To begin with question 3, we can represent the stations of the 19th arrondissement, first within the whole of Paris.
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+On peut ensuite zoomer sur cet arrondissement et faire une carte avec un fond plus travaillé:
+:::
+::: {.content-visible when-profile="en"}
+We can then zoom in on this arrondissement and create a map with a more detailed background:
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Carte obtenue à la question 5 :
+:::
+::: {.content-visible when-profile="en"}
+Our map after question 5 looks like the following one
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+
+Avec cette carte, basée sur des aplats de couleurs (_choropleth map_), le lecteur est victime d’une illusion classique. Les arrondissements les plus visibles sur la carte sont les plus grands. D’ailleurs c’est assez logique qu’ils soient également mieux pourvus en velib. Même si l’offre de velib est probablement plus reliée à la densité de population et d’équipements, on peut penser que l’effet taille joue et que celui-ci est certainement le phénomène le plus visible sur notre carte alors qu'il ne s'agit peut-être pas du facteur de premier ordre en réalité.
+
+Si on représente plutôt la capacité sous forme de densité, pour tenir compte de la taille différente des arrondissements, les conclusions sont inversées et correspondent mieux aux attentes d’un modèle centre-périphérie. Les arrondissements centraux sont mieux pourvus. Si nous faisions une carte avec des ronds proportionnels plutôt qu’une carte chorolèpthe, cela serait encore plus visible ; néanmoins la cartographie n'est pas l'objet de ce chapitre. 
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+With this map, based on color gradients (choropleth map), the reader falls victim to a classic illusion. The most visible arrondissements on the map are the largest ones. It is logical that these areas are also better equipped with Vélib stations. Although the availability of Vélib stations is likely more related to population density and infrastructure, the size effect is likely the most visible phenomenon on our map, even though it might not be the primary factor in reality.
+
+If we instead represent the capacity in terms of density, to account for the varying sizes of the arrondissements, the conclusions are reversed and better align with the expectations of a center-periphery model. The central arrondissements are better equipped. If we made a map with proportional circles rather than a choropleth map, this would be even more visible; however, cartography is not the focus of this chapter.
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+## Exercice supplémentaire
+
+Les exercices précédents ont permis de se familiariser au traitement de données
+spatiales. Néanmoins il arrive fréquemment de devoir jongler de manière plus ardue avec la
+dimension géométrique. Il peut s'agir, par exemple, de changer d'échelle territoriale dans les données ou d'introduire
+des fusions/dissolutions de géométries.
+
+Nous allons illustrer cela avec un exercice supplémentaire illustrant, en pratique, comment travailler des données dans les modèles d'économie urbaine où on fait l'hypothèse de déplacements au plus proche point ([modèle d'Hotelling](https://fr.wikipedia.org/wiki/Loi_de_Hotelling)). 
+
+Imaginons que chaque utilisateur de velib se déplace exclusivement
+vers la station la plus proche (à supposer qu'il n'y a jamais pénurie
+ou surcapacité). Quelle est la carte de la couverture des vélibs ? 
+Pour répondre à ce type de question, on utilise fréquemment la
+la [tesselation de Voronoï](https://fr.wikipedia.org/wiki/Diagramme_de_Vorono%C3%AF),
+une opération classique pour transformer des points en polygones. 
+
+L'exercice suivant
+permet de se familiariser avec la construction de _voronoi_ [^notevoronoi].
+
+
+[^notevoronoi]: Dans [ce document de travail](https://www.insee.fr/en/statistiques/4925202) sur données de téléphonie mobile, on montre néanmoins que cette approche n'est pas sans biais
+sur des phénomènes où l'hypothèse de proximité spatiale est
+trop simplificatrice.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+## Additional exercise
+
+The previous exercises allowed for familiarization with the processing of spatial data. However, it is often necessary to juggle more complex geometric dimensions. This can include, for example, changing territorial scales in the data or introducing merges/dissolutions of geometries.
+
+We will illustrate this with an additional exercise that demonstrates how to work with data in urban economic models where we assume movement to the nearest point ([Hotelling's model](https://en.wikipedia.org/wiki/Hotelling%27s_law)).
+
+Let's imagine that each Vélib user moves exclusively to the nearest station (assuming there is never a shortage or overcapacity). What is the map of Vélib coverage? To answer this type of question, we frequently use the [Voronoi tessellation](https://en.wikipedia.org/wiki/Voronoi_diagram), a classic operation for transforming points into polygons.
+
+The following exercise allows for familiarization with the construction of Voronoi[^notevoronoi].
+
+[^notevoronoi]: In [this working paper](https://www.insee.fr/en/statistiques/4925202) on mobile phone data, it is shown that this approach is not without bias in phenomena where the spatial proximity hypothesis is overly simplistic.
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+:::: {.callout-tip}
+## Exercice 5 (optionnel): La carte de couverture des stations
+
+Cet exercice est plus complexe parce qu'il implique de revenir à `Shapely`, une librairie plus bas niveau que `GeoPandas`. 
+
+Cet exercice est laissé libre. Une source d'inspiration possible est cette discussion sur [StackExchange](https://gis.stackexchange.com/questions/337561/making-polygon-for-every-point-in-set-using-voronoi-diagram). 
+
+L'objectif est de faire deux cartes de couverture: une au niveau de la petite couronne et l'autre seulement au sein de Paris intramuros. 
+
+::::
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+::: {.callout-tip}
+## Exercise 5 (optional): Coverage map of the stations
+
+This exercise is more complex because it involves going back to `Shapely`, a lower-level library than `GeoPandas`.
+
+This exercise is left open-ended. A possible source of inspiration is this discussion on [StackExchange](https://gis.stackexchange.com/questions/337561/making-polygon-for-every-point-in-set-using-voronoi-diagram).
+
+The objective is to make two coverage maps: one at the level of the petite couronne and the other only within Paris intramuros.
+
+:::
+
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+La première carte de couverture, au niveau de l'agglomération dans son ensemble,
+permet de voir la densité plus importante des
+stations velib dans le centre parisien:
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+The first coverage map, at the agglomeration level, shows the higher density of Velib stations in central Paris:
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+Si on zoome sur Paris intramuros, on a également une hétérogénéité dans la couverture.
+On a moins d'hétérogénéité dans les surfaces de couverture puisque la densité est importante mais on remarque néanmoins des divergences entre certains espaces.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+If we zoom in on Paris intramuros, we also see heterogeneity in coverage.
+There is less heterogeneity in coverage areas since the density is high, but we still notice divergences between certain areas.
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+
+# Références
+
+:::
+
+::: {.content-visible when-profile="fr"}
+
+# References
+
+:::
+
+---
+jupyter:
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---

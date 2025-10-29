@@ -1,0 +1,56 @@
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+## Exercice 3: vérification des clés de jointure
+
+On commence par vérifier les dimensions des `DataFrames` et la structure de certaines variables clés.
+En l'occurrence, les variables fondamentales pour lier nos données sont les variables communales.
+Ici, on a deux variables géographiques: un code commune et un nom de commune. 
+
+1. Vérifier les dimensions des _DataFrames_.
+
+2. Identifier dans `filosofi` les noms de communes qui correspondent à plusieurs codes communes et sélectionner leurs codes. En d'autres termes, identifier les `LIBGEO` tels qu'il existe des doublons de `CODGEO` et les stocker dans un vecteur `x` (conseil: faire attention à l'index de `x`).
+
+On se focalise temporairement sur les observations où le libellé comporte plus de deux codes communes différents
+
+* _Question 3_. Regarder dans `filosofi` ces observations.
+
+* _Question 4_. Pour mieux y voir, réordonner la base obtenue par order alphabétique.
+
+* _Question 5_. Déterminer la taille moyenne (variable nombre de personnes: `NBPERSMENFISC16`) et quelques statistiques descriptives de ces données.
+Comparer aux mêmes statistiques sur les données où libellés et codes communes coïncident.
+
+* _Question 6_. Vérifier les grandes villes (plus de 100 000 personnes),
+la proportion de villes pour lesquelles un même nom est associé à différents codes commune.
+
+* _Question 7_. Vérifier dans `filosofi` les villes dont le libellé est égal à Montreuil.
+Vérifier également celles qui contiennent le terme _'Saint-Denis'_.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip}
+## Exercise 3: Verification of Join Keys
+
+Let's start by checking the dimensions of the `DataFrames` and the structure of some key variables.
+In this case, the fundamental variables for linking our data are the communal variables.
+Here, we have two geographical variables: a commune code and a commune name.
+
+1. Check the dimensions of the `DataFrames`.
+
+2. Identify in `filosofi` the commune names that correspond to multiple commune codes and select their codes. In other words, identify the `LIBGEO` where there are duplicate `CODGEO` and store them in a vector `x` (tip: be careful with the index of `x`).
+
+We temporarily focus on observations where the label involves more than two different commune codes.
+
+* _Question 3_. Look at these observations in `filosofi`.
+
+* _Question 4_. To get a better view, reorder the obtained dataset alphabetically.
+
+* _Question 5_. Determine the average size (variable number of people: `NBPERSMENFISC16`) and some descriptive statistics of this data. Compare it to the same statistics on the data where labels and commune codes coincide.
+
+* _Question 6_. Check the major cities (more than 100,000 people) for the proportion of cities where the same name is associated with different commune codes.
+
+* _Question 7_. Check in `filosofi` the cities where the label is equal to Montreuil. Also, check those that contain the term _'Saint-Denis'_.
+
+::::
+:::

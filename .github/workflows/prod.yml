@@ -1,0 +1,50 @@
+name: Render and Deploy Quarto Site
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  render:
+    name: Render Quarto site (FR + EN)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - uses: actions/checkout@v4
+
+      # Step 2: Set up Quarto
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      # Step 3: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Step 4: Install dependencies using uv + your scripts
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install -r pyproject.toml --system
+          chmod +x requirements.sh
+          ./build/requirements.sh
+          python -m spacy download en_core_web_sm || true
+
+      # Step 5: Render French profile
+      - name: Render French site
+        run: quarto render --profile fr --to html
+
+      # Step 6: Render English profile
+      - name: Render English site
+        run: quarto render --profile en --to html
+
+      # Step 7: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site

@@ -1,0 +1,2128 @@
+---
+title: "Web scraping avec Python"
+title-en: "Web scraping with Python"
+author: Lino Galiana
+tags:
+  - Webscraping
+  - BeautifulSoup
+  - Exercice
+  - Manipulation
+categories:
+  - Exercice
+  - Manipulation
+type: book
+description: |
+  `Python` permet de facilement récupérer une page web pour en extraire des données à restructurer. Le _web scraping_, que les Canadiens nomment _"moissonnage du web"_, est une manière de plus en plus utilisée de
+  récupérer une grande masse d'information en temps réel.
+  Ce chapitre présente les deux principaux paradigmes par le biais de `BeautifulSoup` et `Selenium` et les
+  principaux défis du _web scraping_.
+description-en: |
+  Python makes it easy to retrieve a web page and extract data for restructuring. Web scraping is an increasingly popular way of retrieving large amounts of information in real time. This chapter presents the two main paradigms through `BeautifulSoup` and `Selenium` and the main challenges of _web scraping_.
+image: bulbasaur.jpg
+echo: false
+---
+
+{{< badges
+    printMessage="true"
+>}}
+
+:::: {.content-visible when-format="ipynb"}
+::: {.warninglang .callout-warning}
+:::
+::::
+
+
+:::: {.content-visible when-profile="fr"}
+
+::: {.callout-tip collapse="true"}
+
+## Compétences à l'issue de ce chapitre
+
+- Comprendre les enjeux du web scraping, en particulier les questions de légalité (RGPD, zone grise), de stabilité des sites, et de fiabilité des données ;
+- Appliquer de bonnes pratiques lors du scraping : consulter le fichier `robots.txt`, espacer les requêtes, éviter de surcharger les sites, privilégier les périodes creuses ;
+- Saisir la structure HTML d’une page (balises, parent-enfant) pour cibler correctement les éléments à extraire ;
+- Utiliser le package `requests` pour récupérer le contenu d’une page web, et `BeautifulSoup` pour analyser et naviguer dans le HTML (méthodes `find`, `find_all`) ;
+- Mettre en pratique le scraping avec un exercice concret (liste des équipes de Ligue 1) ;
+- Découvrir Selenium pour simuler le comportement d’un utilisateur sur des pages dynamiques générées par JavaScript ;
+- Évaluer les limites du web scraping et justifier l’usage d’API plus robustes quand elles sont disponibles.
+
+:::
+
+::::
+
+  
+::::: {.content-visible when-profile="en"}
+
+::: {.callout-tip collapse="true"}
+
+## Skills you will acquire in this chapter
+
+- Understand the key challenges of web scraping, including legal concerns (e.g. GDPR, grey areas), site stability, and data reliability  
+- Follow best practices when scraping: check the `robots.txt` file, space out your requests, avoid overloading servers, and scrape during off-peak hours when possible  
+- Navigate the HTML structure of a web page (tags, parent-child relationships) to accurately target the elements you want to extract  
+- Use the `requests` library to fetch web page content, and `BeautifulSoup` to parse and explore the HTML using methods like `find` and `find_all`  
+- Practice your scraping skills with a hands-on exercise involving the French Ligue 1 football team list  
+- Explore Selenium for simulating user interactions on JavaScript-driven dynamic pages  
+- Understand the limitations of web scraping and know when it’s better to use more stable and reliable APIs  
+:::
+
+::::
+
+::: {.content-visible when-profile="fr"}
+Le [_web  scraping_](https://fr.wikipedia.org/wiki/Web_scraping) désigne les techniques d'extraction du contenu des sites internet.
+C'est une pratique très utile pour toute personne souhaitant travailler sur des informations disponibles en ligne, mais n'existant pas forcément sous la forme d'un tableau *Excel*.
+
+Ce TP vous présente comment créer et exécuter des robots afin de recupérer rapidement des informations utiles à vos projets actuels ou futurs.
+Il part de quelques cas d'usages concret.
+Ce chapitre est très fortement inspiré et réadapté à partir de [celui de Xavier Dupré](http://www.xavierdupre.fr/app/ensae_teaching_cs/helpsphinx/notebooks/TD2A_Eco_Web_Scraping.html), l'ancien professeur de la matière.
+:::
+
+::: {.content-visible when-profile="en"}
+[_Web scraping_](https://en.wikipedia.org/wiki/Web_scraping) refers to techniques for extracting content from websites.
+It is a very useful practice for anyone looking to work with information available online, but not necessarily in the form of an *Excel* table.
+
+This chapter introduces you to how to create and run bots to quickly retrieve useful information for your current or future projects.
+It starts with some concrete use cases.
+This chapter is heavily inspired and adapted from [Xavier Dupré's](http://www.xavierdupre.fr/app/ensae_teaching_cs/helpsphinx/notebooks/TD2A_Eco_Web_Scraping.html) work, the former professor of the subject.
+:::
+
+::: {.content-visible when-profile="fr"}
+# Enjeux
+
+Un certain nombre d'enjeux du _web scraping_ ne seront évoqués
+que superficiellement dans le cadre de ce chapitre.
+
+## La zone grise de la légalité du _web scraping_
+
+En premier lieu, en ce qui concerne la question de la légalité
+de la récupération d'information par _scraping_, il existe
+une zone grise. Ce n'est pas parce qu'une information est
+disponible sur internet, directement ou avec un peu de recherche,
+qu'elle peut être récupérée et réutilisée.
+
+L'excellent [cours d'Antoine Palazzolo](https://inseefrlab.github.io/formation-webscraping/) évoque un certain nombre de cas
+médiatiques et judiciaires sur cette question.
+Dans le champ français, la CNIL a publié en 2020
+de nouvelles directives sur le *web scraping* reprécisant
+que toute donnée ne peut être réutilisée à l'insu de la personne
+à laquelle ces données appartiennent. Autrement dit, en principe,
+les données collectées par _web scraping_ sont soumises au
+RGPD, c'est-à-dire nécessitent le consentement des personnes
+à partir desquelles la réutilisation des données est faite.
+
+Il est donc recommandé d'__être vigilant avec les données récupérées__
+par _web scraping_ pour ne pas se mettre en faute légalement.
+:::
+
+::: {.content-visible when-profile="en"}
+# Issues
+
+A number of issues related to _web scraping_ will only be briefly mentioned in this chapter.
+
+## The Legal Gray Area of _Web Scraping_
+
+First, regarding the legality of retrieving information through _scraping_, there is a gray area. Just because information is available on the internet, either directly or with a little searching, does not mean it can be retrieved and reused.
+
+The excellent [course by Antoine Palazzolo](https://inseefrlab.github.io/formation-webscraping/) discusses several media and legal cases on this issue. In France, the CNIL published new guidelines in 2020 on *web scraping*, clarifying that any data cannot be reused without the knowledge of the person to whom the data belongs. In other words, in principle, data collected by _web scraping_ is subject to GDPR, meaning it requires the consent of the individuals from whom the data is reused.
+
+It is therefore recommended to __be cautious with the data retrieved__ by _web scraping_ to avoid legal issues.
+:::
+
+
+::: {.content-visible when-profile="fr"}
+## Stabilité et fiabilité des informations reçues
+
+La récupération de données par _web scraping_
+est certes pratique mais elle ne correspond pas nécessairement
+à un usage pensé, ou désiré, par un fournisseur de données.
+Les données étant coûteuses à collecter et à mettre à disposition,
+certains sites ne désirent pas nécessairement que celles-ci soient
+extraites gratuitement et facilement. _A fortiori_ lorsque la donnée
+peut permettre à un concurrent de disposer d'une information
+utile d'un point de vue commercial (prix d'un produit concurrent, etc.).
+
+Les acteurs mettent donc souvent en oeuvre des stratégies pour bloquer ou
+limiter la quantité de données scrapées. La méthode la plus
+classique est la détection et le blocage
+des requêtes faites par des robots plutôt que par des humains.
+Pour des acteurs spécialisés, cette détection est très facile car
+de nombreuses preuves permettent d'identifier si une visite du site _web_
+provient d'un utilisateur
+humain derrière un navigateur ou d'un robot. Pour ne citer que quelques indices :
+vitesse de la navigation entre pages, rapidité à extraire la donnée,
+empreinte digitale du navigateur utilisé, capacité à répondre à des
+questions aléatoires (captcha)...
+Les bonnes pratiques, évoquées par la suite, ont pour objectif de faire
+en sorte qu'un robot se comporte de manière civile en adoptant un comportement
+proche de celui de l'humain mais sans contrefaire le fait qu'il ne s'agit
+pas d'un humain.
+
+Il convient d'ailleurs
+d'être prudent quant aux informations reçues par _web scraping_.
+La donnée étant au coeur du modèle économique de certains acteurs, certains
+n'hésitent pas à renvoyer des données fausses aux robots
+plutôt que les bloquer. C'est de bonne guerre !
+Une autre technique piège s'appelle le _honey pot_. Il s'agit de pages qu'un humain
+n'irait jamais visiter - par exemple parce qu'elles n'apparaissent pas dans
+l'interface graphique - mais sur lesquelles un robot, en recherche automatique
+de contenu, va rester bloquer.
+
+Sans aller jusqu'à la stratégie de blocage du _web scraping_, d'autres raisons
+peuvent expliquer qu'une récupération de données ait fonctionné par
+le passé mais ne fonctionne plus. La plus fréquente est un changement dans la structure
+d'un site _web_. Le _web scraping_ présente en effet l'inconvénient d'aller chercher
+de l'information dans une structure très hiérarchisée. Un changement dans cette structure
+peut suffire à rendre un robot incapable  de récupérer du contenu. Or, pour rester
+attractifs, les sites _web_ changent fréquemment ce qui peut facilement
+rendre inopérant un robot.
+
+De manière générale, l'un des principaux messages de ce
+chapitre, à retenir, est que le
+__web scraping est une solution de dernier ressort, pour des récupérations ponctuelles de données sans garantie de fonctionnement ultérieur__. Il est préférable de __privilégier les API lorsque celles-ci sont disponibles__.
+Ces dernières ressemblent à un contrat (formel ou non) entre un fournisseur de données
+et un utilisateur où sont définis des besoins (les données) mais aussi des
+conditions d'accès (nombre de requêtes, volumétrie, authentification...) là
+où le _web scraping_ est plus proche du comportement dans le _Far West_.
+:::
+
+::: {.content-visible when-profile="en"}
+## Stability and Reliability of Retrieved Information
+
+Data retrieval through _web scraping_ is certainly practical, but it does not necessarily align with the intended or desired use by a data provider. Since data is costly to collect and make available, some sites may not necessarily want it to be extracted freely and easily. Especially when the data could provide a competitor with commercially useful information (e.g., the price of a competing product).
+
+As a result, companies often implement strategies to block or limit the amount of data scraped. The most common method is detecting and blocking requests made by bots rather than humans. For specialized entities, this detection is quite easy because numerous indicators can identify whether a website visit comes from a human user behind a browser or a bot. To mention just a few clues: browsing speed between pages, speed of data extraction, fingerprinting of the browser used, ability to answer random questions (captcha)...
+
+The best practices mentioned later aim to ensure that a bot behaves civilly by adopting behavior close to that of a human without pretending to be one.
+
+It's also essential to be cautious about the information received through _web scraping_. Since data is central to some business models, some companies don't hesitate to send false data to bots rather than blocking them. It's fair play! Another trap technique is called the _honey pot_. These are pages that a human would never visit—for example, because they don't appear in the graphical interface—but where a bot, automatically searching for content, might get stuck.
+
+Without resorting to the strategy of blocking _web scraping_, other reasons can explain why a data retrieval that worked in the past may no longer work. The most frequent reason is a change in the structure of a website. _Web scraping_ has the disadvantage of retrieving information from a very hierarchical structure. A change in this structure can make a bot incapable of retrieving content. Moreover, to remain attractive, websites frequently change, which can easily render a bot inoperative.
+
+In general, one of the key takeaways from this chapter is that __web scraping is a last resort solution for occasional data retrieval without any guarantee of future functionality__. It is preferable to __favor APIs when they are available__. The latter resemble a contract (formal or not) between a data provider and a user, where needs (the data) and access conditions (number of requests, volume, authentication...) are defined, whereas _web scraping_ is more akin to behavior in the _Wild West_.
+:::
+
+::: {.content-visible when-profile="fr"}
+## Les bonnes pratiques
+
+La possibilité de récupérer des données par l'intermédiaire
+d'un robot ne signifie pas qu'on peut se permettre de ne pas être
+civilisé. En effet, lorsqu'il est non-maîtrisé, le
+_web scraping_ peut ressembler à une attaque informatique
+classique pour faire sauter un site _web_ : le déni de service.
+Le [cours d'Antoine Palazzolo](https://inseefrlab.github.io/formation-webscraping/) revient
+sur certaines bonnes pratiques qui ont émergé dans la communauté
+des _scrapeurs_. Il est recommandé de lire cette ressource
+pour en apprendre plus sur ce sujet. Y sont évoquées
+plusieurs conventions, parmi lesquelles :
+
+- Se rendre, depuis la racine du site,
+sur le fichier `robots.txt` pour vérifier les consignes
+proposées par les développeurs du site _web_ pour
+cadrer le comportement des robots ;
+- Espacer chaque requêtes de plusieurs secondes, comme le ferait
+un humain, afin d'éviter de surcharger le site _web_ et de le
+faire sauter par déni de service ;
+- Faire les requêtes dans les heures creuses de fréquentation du
+site _web_ s'il ne s'agit pas d'un site consulté internationalement.
+Par exemple, pour un site en français, lancer le robot
+pendant la nuit en France métropolitaine, est une bonne pratique.
+Pour lancer un robot depuis `Python` à une heure programmée
+à l'avance, il existe les `cronjobs`.
+:::
+
+::: {.content-visible when-profile="en"}
+## Best Practices
+
+The ability to retrieve data through a bot does not mean one can afford to be uncivilized. Indeed, when uncontrolled, _web scraping_ can resemble a classic cyberattack aimed at taking down a website: a denial of service. The [course by Antoine Palazzolo](https://inseefrlab.github.io/formation-webscraping/) reviews some best practices that have emerged in the scraping community. It is recommended to read this resource to learn more about this topic. Several conventions are discussed, including:
+
+- Navigate from the site's root to the `robots.txt` file to check the guidelines provided by the website's developers to regulate the behavior of bots;
+- Space out each request by several seconds, as a human would, to avoid overloading the website and causing it to crash due to a denial of service;
+- Make requests during the website's off-peak hours if it is not an internationally accessed site. For example, for a French-language site, running the bot during the night in metropolitan France is a good practice. To run a bot from `Python` at a pre-scheduled time, there are `cronjobs`.
+:::
+
+
+::: {.content-visible when-profile="fr"}
+# Un détour par le Web : comment fonctionne un site ?
+
+Même si ce TP ne vise pas à faire un cours de web, il vous faut néanmoins certaines bases sur la manière dont un site internet fonctionne afin de comprendre comment sont structurées les informations sur une page.
+
+Un site Web est un ensemble de pages codées en *HTML* qui permet de décrire à la fois le contenu et la forme d'une page *Web*.
+
+Pour voir cela, ouvrez n'importe quelle page web et faites un clic-droit dessus.
+
+- Sous `Chrome` <i class="fab fa-chrome"></i> : Cliquez ensuite sur _"Affichez le code source de la page"_ (<kbd>CTRL</kbd>+<kbd>U</kbd>) ;
+- Sous `Firefox` <i class="fab fa-firefox"></i> : _"Code source de la page"_ (<kbd>CTRL</kbd>+<kbd>MAJ</kbd>+<kbd>K</kbd>) ;
+- Sous `Edge` <i class="fab fa-edge"></i> : _"Affichez la page source"_ (<kbd>CTRL</kbd>+<kbd>U</kbd>) ;
+- Sous `Safari` <i class="fab fa-safari"></i> : voir comment faire [ici](https://fr.wikihow.com/voir-le-code-source)
+
+Si vous savez quel élément vous intéresse, vous pouvez également ouvrir l'inspecteur du navigateur (clic droit sur l'élément + "Inspecter"),
+pour afficher les balises encadrant votre élément de façon plus ergonomique, un peu comme un zoom.
+:::
+
+::: {.content-visible when-profile="en"}
+# A Detour to the Web: How Does a Website Work?
+
+Even though this lab doesn't aim to provide a web course, you still need some basics on how a website works to understand how information is structured on a page.
+
+A website is a collection of pages coded in *HTML* that describe both the content and the layout of a *Web* page.
+
+To see this, open any web page and right-click on it.
+
+- On `Chrome` <i class="fab fa-chrome"></i>: Then click on _"View page source"_ (<kbd>CTRL</kbd>+<kbd>U</kbd>);
+- On `Firefox` <i class="fab fa-firefox"></i>: _"View Page Source"_ (<kbd>CTRL</kbd>+<kbd>SHIFT</kbd>+<kbd>K</kbd>);
+- On `Edge` <i class="fab fa-edge"></i>: _"View page source"_ (<kbd>CTRL</kbd>+<kbd>U</kbd>);
+- On `Safari` <i class="fab fa-safari"></i>: see how to do it [here](https://www.wikihow.com/View-Source-Code).
+
+If you know which element interests you, you can also open the browser's inspector (right-click on the element + "Inspect") to display the tags surrounding your element more ergonomically, like a zoom.
+:::
+
+
+::: {.content-visible when-profile="fr"}
+## Les balises
+
+Sur une page web, vous trouverez toujours à coup sûr des éléments comme `<head>`, `<title>`, etc. Il  s'agit des codes qui vous permettent de structurer le contenu d'une page *HTML* et qui s'appellent des **balises**.
+Citons, par exemple, les balises `<p>`, `<h1>`, `<h2>`, `<h3>`, `<strong>` ou `<em>`.
+Le symbole ``< >`` est une balise : il sert à indiquer le début d'une partie. Le symbole `</ >` indique la fin de cette partie. La plupart des balises vont par paires, avec une *balise ouvrante* et une *balise fermante* (par exemple `<p>` et `</p>`).
+
+Par exemple, les principales balises
+définissant la structure d'un tableau sont les suivantes :
+
+| Balise      | Description                        |
+|-------------|------------------------------------|
+| `<table>`   | Tableau                            |
+| `<caption>` | Titre du tableau                   |
+| `<tr>`      | Ligne de tableau                   |
+| `<th>`      | Cellule d'en-tête                  |
+| `<td>`      | Cellule                            |
+| `<thead>`   | Section de l'en-tête du tableau    |
+| `<tbody>`   | Section du corps du tableau        |
+| `<tfoot>`   | Section du pied du tableau         |
+:::
+
+::: {.content-visible when-profile="en"}
+## Tags
+
+On a web page, you will always find elements like `<head>`, `<title>`, etc. These are the codes that allow you to structure the content of an *HTML* page and are called **tags**.
+For example, tags include `<p>`, `<h1>`, `<h2>`, `<h3>`, `<strong>`, or `<em>`.
+The symbol ``< >`` is a tag: it indicates the beginning of a section. The symbol `</ >` indicates the end of that section. Most tags come in pairs, with an *opening tag* and a *closing tag* (e.g., `<p>` and `</p>`).
+
+For example, the main tags defining the structure of a table are as follows:
+
+| Tag         | Description                        |
+|-------------|------------------------------------|
+| `<table>`   | Table                              |
+| `<caption>` | Table title                        |
+| `<tr>`      | Table row                          |
+| `<th>`      | Header cell                        |
+| `<td>`      | Cell                               |
+| `<thead>`   | Table header section               |
+| `<tbody>`   | Table body section                 |
+| `<tfoot>`   | Table footer section               |
+:::
+
+
+::: {.content-visible when-profile="fr"}
+### Application : un tableau en HTML
+
+Le code `HTML` du tableau suivant :
+:::
+
+::: {.content-visible when-profile="en"}
+### Application: A Table in HTML
+
+The `HTML` code for the following table:
+:::
+
+```{html}
+<table>
+    <caption> Le Titre de mon tableau </caption>
+    <tr>
+        <th>Nom</th>
+        <th>Profession</th>
+    </tr>
+    <tr>
+        <td>Astérix</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>Obélix</td>
+        <td>Tailleur de Menhir</td>
+    </tr>
+</table>
+```
+
+Donnera dans le navigateur :
+
+::: {.cell .markdown}
+```{=html}
+<table>
+    <caption> Le Titre de mon tableau </caption>
+    <tr>
+        <th>Nom</th>
+        <th>Profession</th>
+    </tr>
+    <tr>
+        <td>Astérix</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>Obélix</td>
+        <td>Tailleur de Menhir</td>
+    </tr>
+</table>
+```
+:::
+
+::: {.content-visible when-profile="fr"}
+### Parent et enfant
+
+Dans le cadre du langage HTML, les termes de parent (*parent*) et enfant (*child*) servent à désigner des élements emboîtés les uns dans les autres. Dans la construction suivante, par exemple :
+:::
+
+::: {.content-visible when-profile="en"}
+### Parent and Child
+
+In the context of HTML language, the terms parent (*parent*) and child (*child*) are used to refer to elements nested within each other. In the following construction, for example:
+:::
+
+```html
+<div>
+    <p>
+       bla,bla
+    </p>
+</div>
+```
+
+::: {.content-visible when-profile="fr"}
+Sur la page web, cela apparaitra de la manière suivante :
+:::
+
+::: {.content-visible when-profile="en"}
+On the web page, it will appear as follows:
+:::
+
+::: {.cell .markdown}
+```{=html}
+<div>
+    <p>
+       bla,bla
+    </p>
+</div>
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On dira que l'élément `<div>` est le parent de l'élément `<p>` tandis que l'élément `<p>` est l'enfant de l'élément `<div>`.
+
+> *Mais pourquoi apprendre ça pour "scraper" ?*
+
+Parce que, pour bien récupérer les informations d'un site internet, il faut pouvoir comprendre sa structure et donc son code HTML. Les fonctions `Python` qui servent au _scraping_ sont principalement construites pour vous permettre de naviguer entre les balises.
+Avec `Python`, vous allez en fait reproduire votre comportement manuel de recherche de manière
+à l'automatiser.
+:::
+
+::: {.content-visible when-profile="en"}
+One would say that the `<div>` element is the parent of the `<p>` element, while the `<p>` element is the child of the `<div>` element.
+
+> *But why learn this for "scraping"?*
+
+Because to effectively retrieve information from a website, you need to understand its structure and, therefore, its HTML code. The `Python` functions used for _scraping_ are primarily designed to help you navigate between tags.
+With `Python`, you will essentially replicate your manual search behavior to automate it.
+:::
+
+
+::: {.content-visible when-profile="fr"}
+# Scraper avec `Python`: le package `BeautifulSoup`
+
+## Les packages disponibles
+
+Dans la première partie de ce chapitre,
+nous allons essentiellement utiliser le package [`BeautifulSoup4`](https://www.crummy.com/software/BeautifulSoup/bs4/doc/),
+en conjonction avec  [`requests`](https://requests.readthedocs.io/en/latest/). Ce dernier _package_ permet de récupérer le texte
+brut d'une page qui sera ensuite
+inspecté via [`BeautifulSoup4`](https://www.crummy.com/software/BeautifulSoup/bs4/doc/).
+
+`BeautifulSoup` sera suffisant quand vous voudrez travailler sur des pages HTML statiques. Dès que les informations que vous recherchez sont générées via l'exécution de scripts [Javascript](https://fr.wikipedia.org/wiki/JavaScript), il vous faudra passer par des outils comme [Selenium](https://selenium-python.readthedocs.io/).
+
+De même, si vous ne connaissez pas l'URL, il faudra passer par un _framework_ comme [Scrapy](https://scrapy.org/), qui passe facilement d'une page à une autre. On appelle
+cette technique le _"web crawling"_. `Scrapy` est plus complexe à manipuler que `BeautifulSoup` : si vous voulez plus de détails, rendez-vous sur la page du [tutoriel `Scrapy`](https://doc.scrapy.org/en/latest/intro/tutorial.html).
+
+Le *web scraping* est un domaine où la reproductibilité est compliquée à mettre en oeuvre.
+Une page *web* évolue
+potentiellement régulièrement et d'une page web à l'autre, la structure peut
+être très différente ce qui rend certains codes difficilement exportables.
+Par conséquent, la meilleure manière d'avoir un programme fonctionnel est
+de comprendre la structure d'une page web et dissocier les éléments exportables
+à d'autres cas d'usages des requêtes *ad hoc*.
+:::
+
+::: {.content-visible when-profile="en"}
+# Scraping with `Python`: The `BeautifulSoup` Package
+
+## Available Packages
+
+In the first part of this chapter,
+we will primarily use the [`BeautifulSoup4`](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) package,
+in conjunction with [`requests`](https://requests.readthedocs.io/en/latest/). The latter package allow you to retrieve the raw text
+of a page, which will then be inspected via [`BeautifulSoup4`](https://www.crummy.com/software/BeautifulSoup/bs4/doc/).
+
+`BeautifulSoup` will suffice when you want to work on static HTML pages. As soon as the information you are looking for is generated via the execution of [JavaScript](https://en.wikipedia.org/wiki/JavaScript) scripts, you will need to use tools like [Selenium](https://selenium-python.readthedocs.io/).
+
+Similarly, if you don't know the URL, you'll need to use a framework like [Scrapy](https://scrapy.org/), which easily navigates from one page to another. This technique is called _"web crawling"_. `Scrapy` is more complex to handle than `BeautifulSoup`: if you want more details, visit the [Scrapy tutorial page](https://doc.scrapy.org/en/latest/intro/tutorial.html).
+
+*Web scraping* is an area where reproducibility is difficult to implement.
+A *web* page may evolve
+regularly, and from one web page to another, the structure can be very different, making some code difficult to export.
+Therefore, the best way to have a functional program is
+to understand the structure of a web page and distinguish the elements that can be exported
+to other use cases from *ad hoc* requests.
+:::
+
+::: {#efdbaa13 .cell}
+``` {.python .cell-code}
+!pip install lxml
+!pip install bs4
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+::: {.callout-note}
+Pour être en mesure d'utiliser `Selenium`, il est nécessaire
+de faire communiquer `Python` avec un navigateur _web_ (Firefox ou Chromium).
+Le _package_ `webdriver-manager` permet de faire savoir à `Python` où
+se trouve ce navigateur s'il est déjà installé dans un chemin standard.
+Pour l'installer, le code de la cellule ci-dessous peut être utilisé.
+:::
+
+Pour faire fonctionner `Selenium`, il faut utiliser un package
+nommé `webdriver-manager`. On va donc l'installer, ainsi que `selenium` :
+:::
+
+::: {.content-visible when-profile="en"}
+::: {.callout-note}
+To be able to use `Selenium`, it is necessary
+to make `Python` communicate with a web browser (Firefox or Chromium).
+The `webdriver-manager` package allows `Python` to know where
+this browser is located if it is already installed in a standard path.
+To install it, the code in the cell below can be used.
+:::
+
+To run `Selenium`, you need to use a package
+called `webdriver-manager`. So, we'll install it, along with `selenium`:
+:::
+
+::: {#ac92babd .cell}
+``` {.python .cell-code}
+!pip install selenium
+!pip install webdriver-manager
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+## Récupérer le contenu d'une page HTML
+
+On va commencer doucement. Prenons une page _wikipedia_,
+par exemple celle de la Ligue 1 de football, millésime 2019-2020 : [Championnat de France de football 2019-2020](https://fr.wikipedia.org/wiki/Championnat_de_France_de_football_2019-2020). On va souhaiter récupérer la liste des équipes, ainsi que les url des pages Wikipedia de ces équipes.
+
+Etape 1️⃣ : se connecter à la page wikipedia et obtenir le code source.
+Pour cela, le plus simple est d'utiliser le package `requests`. Celui-ci permet, au niveau de `Python` de faire la requête HTTP adéquate pour avoir le contenu d'une page à partir de son URL:
+:::
+
+::: {.content-visible when-profile="en"}
+## Retrieve the Content of an HTML Page
+
+Let's start slowly. Let's take a Wikipedia page,
+for example, the one for the 2019-2020 Ligue 1 football season: [2019-2020 Championnat de France de football](https://en.wikipedia.org/wiki/2019%E2%80%9320_Ligue_1). We will want to retrieve the list of teams, as well as the URLs of the Wikipedia pages for these teams.
+
+Step 1️⃣: Connect to the Wikipedia page and obtain the source code.
+For this, the simplest way is to use the `requests` package.
+This allows `Python` to make the appropriate HTTP request to obtain the content of a page from its URL:
+:::
+
+
+
+::: {#10654a76 .cell}
+``` {.python .cell-code}
+import requests
+url_ligue_1 = "https://fr.wikipedia.org/wiki/Championnat_de_France_de_football_2019-2020"
+
+request_text = requests.get(
+    url_ligue_1,
+    headers={"User-Agent": "Python for data science tutorial"}
+).content
+```
+:::
+
+
+::: {#89f431d1 .cell}
+``` {.python .cell-code}
+request_text
+```
+:::
+
+
+:::: {.content-visible when-profile="fr"}
+::: {.callout-warning}
+Pour limiter le volume de _bot_ récupérant les informations depuis Wikipedia (très utilisé par exemple par les LLM), il faut dorénavant indiquer un _user agent_ par le biais de `request`. C'est d'ailleurs une bonne pratique qui permet aux sites de connaître les consommateurs de ses ressources.
+:::
+::::
+
+:::: {.content-visible when-profile="en"}
+::: {.callout-warning}
+To limit the volume of _bot_ retrieving information from Wikipedia (much used by LLMs, for example), you should now specify a _user agent_ via `request`. This is a good practice, enabling sites to know who is using their resources.
+:::
+::::
+
+
+::: {.content-visible when-profile="fr"}
+Etape 2️⃣ : rechercher, dans ce code source foisonnant, les balises qui permettent d'extraire l'information qui nous intéresse. C'est l'intérêt principal du package `BeautifulSoup` que d'offrir des méthodes simples d'usage pour chercher, dans des textes pourtant complexes, des chaines de caractères à partir de balises HTML ou XML.
+:::
+
+::: {.content-visible when-profile="en"}
+Step 2️⃣: search this abundant source code for the tags that will extract the information we're interested in. The main interest of the `BeautifulSoup` package is to offer easy-to-use methods for searching complex texts for strings of characters from HTML or XML tags.
+:::
+
+::: {#f66efb48 .cell}
+``` {.python .cell-code}
+import bs4
+page = bs4.BeautifulSoup(request_text, "lxml")
+```
+:::
+
+
+
+
+::: {.content-visible when-profile="fr"}
+Si on _print_ l'objet `page` créée avec `BeautifulSoup`,
+on voit que ce n'est plus une chaine de caractères mais bien une page HTML avec des balises.
+On peut à présent chercher des élements à l'intérieur de ces balises.
+:::
+
+::: {.content-visible when-profile="en"}
+If we _print_ the `page` object created with `BeautifulSoup`,
+we see that it is no longer a string but an actual HTML page with tags.
+We can now search for elements within these tags.
+:::
+
+::: {.content-visible when-profile="fr"}
+## La méthode `find`
+
+Comme première illustration de la puissance de `BeautifulSoup`, on veut connaître le titre de la page. Pour cela, on utilise la méthode `.find` et on lui demande *"title"*
+
+::: {#64fb4ef7 .cell}
+``` {.python .cell-code}
+print(page.find("title"))
+```
+:::
+
+
+La méthode `.find` ne renvoie que la première occurrence de l'élément.
+
+Pour vous en assurer, vous pouvez :
+
+- copier le bout de code source obtenu lorsque vous cherchez une `table`,
+- le coller dans une cellule de votre notebook,
+- et passer la cellule en _"Markdown"_.
+
+
+La cellule avec le copier-coller du code source donne :
+
+::: {#6fab90d8 .cell}
+``` {.python .cell-code}
+print(page.find("table"))
+```
+:::
+
+
+ce qui est le texte source permettant de générer le tableau suivant :
+:::
+
+::: {.content-visible when-profile="en"}
+## The `find` method
+
+As a first illustration of the power of `BeautifulSoup`, we want to know the title of the page. To do this, we use the `.find` method and ask it *"title ”*.
+
+::: {#0b8b57a9 .cell}
+``` {.python .cell-code}
+print(page.find("title"))
+```
+:::
+
+
+The `.find` method only returns the first occurrence of the element.
+
+To verify this, you can:
+
+- copy the snippet of source code obtained when you search for a `table`,
+- paste it into a cell in your notebook,
+- and switch the cell to _"Markdown"_.
+
+
+The cell with the copied source code gives:
+
+::: {#f8de7d2c .cell}
+``` {.python .cell-code}
+print(page.find("table"))
+```
+:::
+
+
+which is the source text that generates the following table:
+:::
+
+::: {.cell .markdown}
+
+
+
+:::
+
+::: {.content-visible when-profile="fr"}
+## La méthode `find_all`
+
+Pour trouver toutes les occurrences, on utilise `.find_all()`.
+:::
+
+::: {.content-visible when-profile="en"}
+## The `find_all` Method
+
+To find all occurrences, use `.find_all()`.
+:::
+
+::: {#703a660d .cell}
+``` {.python .cell-code}
+print("Il y a", len(page.find_all("table")), "éléments dans la page qui sont des <table>")
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+`Python` n'est pas le seul langage qui permet de récupérer des éléments issus d'une page web. C'est l'un des objectifs principaux de `Javascript`, qui est accessible par le biais de n'importe quel navigateur web.
+
+Par exemple, pour faire le parallèle avec `page.find('title')` que nous avons utilisé au niveau de `Python`, vous pouvez ouvrir la page [précédemment mentionnée](https://fr.wikipedia.org/wiki/Championnat_de_France_de_football_2019-2020) avec votre navigateur. Après avoir ouvert les outils de développement du navigateur (<kbd>CTRL</kbd>+<kbd>MAJ</kbd>+<kbd>K</kbd> sur `Firefox`), vous pouvez taper dans la console `document.querySelector("title")` qui vous permettra d'obtenir le contenu du noeud HTML recherché:
+
+![](./04_webscraping/console_log.png)
+
+Si vous êtes amenés à utiliser `Selenium` pour faire du _web scraping_, vous retrouverez, en fait, ces verbes `Javascript` dans n'importe quelle méthode que vous allez utiliser.
+
+La compréhension de la structure d'une page et de l'interaction de celle-ci avec le navigateur est extrêmement utile lorsqu'on fait du _scraping_, y compris lorsque le site est purement statique, c'est-à-dire qu'il ne comporte pas d'éléments réagissant à une action d'un navigateur web.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip}
+`Python` is not the only language that allows you to retrieve elements from a web page. This is one of the main objectives of `Javascript`, which is accessible through any web browser.
+
+For example, to draw a parallel with `page.find('title')` that we used in `Python`, you can open the [previously mentioned page](https://fr.wikipedia.org/wiki/Championnat_de_France_de_football_2019-2020) with your browser. After opening the browser's developer tools (<kbd>CTRL</kbd>+<kbd>SHIFT</kbd>+<kbd>K</kbd> on `Firefox`), you can type `document.querySelector("title")` in the console to get the content of the HTML node you are looking for:
+
+![](./04_webscraping/console_log.png)
+
+If you use `Selenium` for web scraping, you will actually encounter these `Javascript` verbs in any method you use.
+
+Understanding the structure of a page and its interaction with the browser is extremely useful when doing _scraping_, even when the site is purely static, meaning it does not have elements reacting to user actions on the web browser.
+
+::::
+:::
+
+
+::: {.content-visible when-profile="fr"}
+# Exercice guidé : obtenir la liste des équipes de Ligue 1
+
+Dans le premier paragraphe de la page _"Participants"_,
+on a le tableau avec les résultats de l'année.
+:::
+
+::: {.content-visible when-profile="en"}
+# Guided Exercise: Get the List of Ligue 1 Teams
+
+In the first paragraph of the _"Participants"_ page,
+there is a table with the results of the year.
+:::
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+## Exercice 1 : Récupérer les participants de la Ligue 1
+
+Pour cela, nous allons procéder en 6 étapes:
+
+1. Trouver le tableau
+2. Récupérer chaque ligne du tableau
+3. Nettoyer les sorties en ne gardant que le texte sur une ligne
+4. Généraliser sur toutes les lignes
+5. Récupérer les entêtes du tableau
+6. Finalisation du tableau
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip}
+## Exercise 1: Retrieve the Participants of Ligue 1
+
+To do this, we will proceed in 6 steps:
+
+1. Find the table
+2. Retrieve each row from the table
+3. Clean up the outputs by keeping only the text in a row
+4. Generalize for all rows
+5. Retrieve the table headers
+6. Finalize the table
+
+::::
+:::
+
+::: {.content-visible when-profile="fr"}
+1️⃣ Trouver le tableau
+:::
+
+::: {.content-visible when-profile="en"}
+1️⃣ Find the table
+:::
+
+::: {#b26d1852 .cell}
+``` {.python .cell-code}
+# on identifie le tableau en question : c'est le premier qui a cette classe "wikitable sortable"
+tableau_participants = page.find('table', {'class' : 'wikitable sortable'})
+```
+:::
+
+
+``` {.python .cell-code}
+print(tableau_participants)
+```
+
+
+::: {.cell .markdown}
+
+
+
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+2️⃣ Récupérer chaque ligne du tableau
+
+On recherche d'abord toutes les lignes du tableau avec la balise `tr`
+:::
+
+::: {.content-visible when-profile="en"}
+2️⃣ Retrieve each row from the table
+
+Let's first search for the rows where `tr` tag appears
+:::
+
+::: {#a1def045 .cell}
+``` {.python .cell-code}
+table_body = tableau_participants.find('tbody')
+rows = table_body.find_all('tr')
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On obtient une liste où chaque élément est une des lignes du tableau
+Pour illustrer cela, on va d'abord afficher la première ligne.
+Celle-ci correspond aux entêtes de colonne:
+:::
+
+::: {.content-visible when-profile="en"}
+You get a list where each element is one of the rows in the table.
+To illustrate this, we will first display the first row.
+This corresponds to the column headers:
+:::
+
+::: {#17f21717 .cell}
+``` {.python .cell-code}
+print(rows[0])
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+La seconde ligne va correspondre à la ligne du premier club présent dans le tableau :
+:::
+
+::: {.content-visible when-profile="en"}
+The second row will correspond to the row of the first club listed in the table:
+:::
+
+::: {#dde7f9c4 .cell}
+``` {.python .cell-code}
+print(rows[1])
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+3️⃣ Nettoyer les sorties en ne gardant que le texte sur une ligne
+:::
+
+::: {.content-visible when-profile="en"}
+3️⃣ Clean the outputs by keeping only the text in a row
+:::
+
+::: {.content-visible when-profile="fr"}
+On va utiliser l'attribut `text` afin de se débarrasser de toute la couche de HTML qu'on obtient à l'étape 2.
+
+Un exemple sur la ligne du premier club :
+- on commence par prendre toutes les cellules de cette ligne, avec la balise `td`.
+- on fait ensuite une boucle sur chacune des cellules et on ne garde que le texte de la cellule avec l'attribut `text`.
+- enfin, on applique la méthode `strip()` pour que le texte soit bien mis en forme (sans espace inutile etc).
+:::
+
+::: {.content-visible when-profile="en"}
+We will use the `text` attribute to strip away all the HTML layer we obtained in step 2.
+
+An example on the first club's row:
+- We start by taking all the cells in that row, using the `td` tag.
+- Then, we loop through each cell and keep only the text from the cell using the `text` attribute.
+- Finally, we apply the `strip()` method to ensure the text is properly formatted (no unnecessary spaces, etc.).
+:::
+
+::: {#29d421ef .cell}
+``` {.python .cell-code}
+cols = rows[1].find_all('td')
+print(cols[0])
+print(cols[0].text.strip())
+```
+:::
+
+
+::: {#02c53757 .cell}
+``` {.python .cell-code}
+for ele in cols : 
+    print(ele.text.strip())
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+4️⃣ Généraliser sur toutes les lignes :
+:::
+
+::: {.content-visible when-profile="en"}
+4️⃣ Generalize for all rows:
+:::
+
+::: {#96b72e8c .cell}
+``` {.python .cell-code}
+for row in rows:
+    cols = row.find_all('td')
+    cols = [ele.text.strip() for ele in cols]
+    print(cols)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On a bien réussi à avoir les informations contenues dans le tableau des participants du championnat.
+Mais la première ligne est étrange : c'est une liste vide ... 
+
+Il s'agit des en-têtes : elles sont reconnues par la balise `th` et non `td`. 
+
+On va mettre tout le contenu dans un dictionnaire, pour le transformer ensuite en DataFrame pandas : 
+:::
+
+::: {.content-visible when-profile="en"}
+We have successfully retrieved the information contained in the participants' table.
+But the first row is strange: it's an empty list...
+
+These are the headers: they are recognized by the `th` tag, not `td`.
+
+We will put all the content into a dictionary, to later convert it into a pandas DataFrame:
+:::
+
+::: {#ea7eec10 .cell}
+``` {.python .cell-code .code-overflow-wrap}
+dico_participants = dict()
+for row in rows:
+    cols = row.find_all('td')
+    cols = [ele.text.strip() for ele in cols]
+    if len(cols) > 0 : 
+        dico_participants[cols[0]] = cols[1:]
+dico_participants
+```
+:::
+
+
+::: {#bc9d028f .cell}
+``` {.python .cell-code}
+import pandas as pd
+data_participants = pd.DataFrame.from_dict(dico_participants,orient='index')
+data_participants.head()
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+5️⃣ Récupérer les en-têtes du tableau :
+:::
+
+::: {.content-visible when-profile="en"}
+5️⃣ Retrieve the table headers:
+:::
+
+::: {#df88694f .cell}
+``` {.python .cell-code}
+for row in rows:
+    cols = row.find_all('th')
+    print(cols)
+    if len(cols) > 0 : 
+        cols = [ele.get_text(separator=' ').strip().title() for ele in cols]
+        columns_participants = cols
+```
+:::
+
+
+::: {#50ee0364 .cell}
+``` {.python .cell-code}
+columns_participants
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+6️⃣ Finalisation du tableau 
+:::
+
+::: {.content-visible when-profile="en"}
+6️⃣ Finalize the table
+:::
+
+::: {#567ddbb7 .cell}
+``` {.python .cell-code}
+data_participants.columns = columns_participants[1:]
+```
+:::
+
+
+::: {#cbe2905a .cell}
+``` {.python .cell-code}
+data_participants.head()
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+# Pour aller plus loin
+
+## Récupération des localisations des stades
+
+Essayez de comprendre pas à pas ce qui est fait dans les étapes qui suivent (la récupération d'informations supplémentaires en naviguant dans les pages des différents clubs).
+:::
+
+::: {.content-visible when-profile="en"}
+# Going Further
+
+## Retrieving stadium Locations
+
+Try to understand step by step what is done in the following steps (retrieving additional information by navigating through the pages of the different clubs).
+:::
+
+::: {#retrieve-stadium-location .cell}
+``` {.python .cell-code}
+import requests
+import bs4
+import pandas as pd
+
+
+def retrieve_page(url: str) -> bs4.BeautifulSoup:
+    """
+    Retrieves and parses a webpage using BeautifulSoup.
+
+    Args:
+        url (str): The URL of the webpage to retrieve.
+
+    Returns:
+        bs4.BeautifulSoup: The parsed HTML content of the page.
+    """
+    r = requests.get(url, headers={"User-Agent": "Python for data science tutorial"})
+    page = bs4.BeautifulSoup(r.content, 'html.parser')
+    return page
+
+
+def extract_team_name_url(team: bs4.element.Tag) -> dict:
+    """
+    Extracts the team name and its corresponding Wikipedia URL.
+
+    Args:
+        team (bs4.element.Tag): The BeautifulSoup tag containing the team information.
+
+    Returns:
+        dict: A dictionary with the team name as the key and the Wikipedia URL as the value, or None if not found.
+    """
+    try:
+        team_url = team.find('a').get('href')
+        equipe = team.find('a').get('title')
+        url_get_info = f"http://fr.wikipedia.org{team_url}"
+        print(f"Retrieving information for {equipe}")
+        return {equipe: url_get_info}
+    except AttributeError:
+        print(f"No <a> tag for \"{team}\"")
+        return None
+
+
+def explore_team_page(wikipedia_team_url: str) -> bs4.BeautifulSoup:
+    """
+    Retrieves and parses a team's Wikipedia page.
+
+    Args:
+        wikipedia_team_url (str): The URL of the team's Wikipedia page.
+
+    Returns:
+        bs4.BeautifulSoup: The parsed HTML content of the team's Wikipedia page.
+    """
+    r = requests.get(
+        wikipedia_team_url, headers={"User-Agent": "Python for data science tutorial"}
+    )
+    page = bs4.BeautifulSoup(r.content, 'html.parser')
+    return page
+
+
+def extract_stadium_info(search_team: bs4.BeautifulSoup) -> tuple:
+    """
+    Extracts stadium information from a team's Wikipedia page.
+
+    Args:
+        search_team (bs4.BeautifulSoup): The parsed HTML content of the team's Wikipedia page.
+
+    Returns:
+        tuple: A tuple containing the stadium name, latitude, and longitude, or (None, None, None) if not found.
+    """
+    for stadium in search_team.find_all('tr'):
+        try:
+            header = stadium.find('th', {'scope': 'row'})
+            if header and header.contents[0].string == "Stade":
+                name_stadium, url_get_stade = extract_stadium_name_url(stadium)
+                if name_stadium and url_get_stade:
+                    latitude, longitude = extract_stadium_coordinates(url_get_stade)
+                    return name_stadium, latitude, longitude
+        except (AttributeError, IndexError) as e:
+            print(f"Error processing stadium information: {e}")
+    return None, None, None
+
+
+def extract_stadium_name_url(stadium: bs4.element.Tag) -> tuple:
+    """
+    Extracts the stadium name and URL from a stadium element.
+
+    Args:
+        stadium (bs4.element.Tag): The BeautifulSoup tag containing the stadium information.
+
+    Returns:
+        tuple: A tuple containing the stadium name and its Wikipedia URL, or (None, None) if not found.
+    """
+    try:
+        url_stade = stadium.find_all('a')[1].get('href')
+        name_stadium = stadium.find_all('a')[1].get('title')
+        url_get_stade = f"http://fr.wikipedia.org{url_stade}"
+        return name_stadium, url_get_stade
+    except (AttributeError, IndexError) as e:
+        print(f"Error extracting stadium name and URL: {e}")
+        return None, None
+
+
+def extract_stadium_coordinates(url_get_stade: str) -> tuple:
+    """
+    Extracts the coordinates of a stadium from its Wikipedia page.
+
+    Args:
+        url_get_stade (str): The URL of the stadium's Wikipedia page.
+
+    Returns:
+        tuple: A tuple containing the latitude and longitude of the stadium, or (None, None) if not found.
+    """
+    try:
+        soup_stade = retrieve_page(url_get_stade)
+        kartographer = soup_stade.find('a', {'class': "mw-kartographer-maplink"})
+        if kartographer:
+            coordinates = kartographer.get('data-lat') + "," + kartographer.get('data-lon')
+            latitude, longitude = coordinates.split(",")
+            return latitude.strip(), longitude.strip()
+        else:
+            return None, None
+    except Exception as e:
+        print(f"Error extracting stadium coordinates: {e}")
+        return None, None
+
+
+def extract_team_info(url_team_tag: bs4.element.Tag, division: str) -> dict:
+    """
+    Extracts information about a team, including its stadium and coordinates.
+
+    Args:
+        url_team_tag (bs4.element.Tag): The BeautifulSoup tag containing the team information.
+        division (str): Team league
+
+    Returns:
+        dict: A dictionary with details about the team, including its division, name, stadium, latitude, and longitude.
+    """
+
+    team_info = extract_team_name_url(url_team_tag)
+    url_team_wikipedia = next(iter(team_info.values()))
+    name_team = next(iter(team_info.keys()))
+    search_team = explore_team_page(url_team_wikipedia)
+    name_stadium, latitude, longitude = extract_stadium_info(search_team)
+    dict_stadium_team = {
+        'division': division,
+        'equipe': name_team,
+        'stade': name_stadium,
+        'latitude': latitude,
+        'longitude': longitude
+    }
+    return dict_stadium_team
+
+
+def retrieve_all_stadium_from_league(url_list: dict, division: str = "L1") -> pd.DataFrame:
+    """
+    Retrieves information about all stadiums in a league.
+
+    Args:
+        url_list (dict): A dictionary mapping divisions to their Wikipedia URLs.
+        division (str): The division for which to retrieve stadium information.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing information about the stadiums in the specified division.
+    """
+    page = retrieve_page(url_list[division])
+    teams = page.find_all('span', {'class': 'toponyme'})
+    all_info = []
+
+    for team in teams:
+        all_info.append(extract_team_info(team, division))
+
+    stadium_df = pd.DataFrame(all_info)
+    return stadium_df
+
+
+# URLs for different divisions
+url_list = {
+    "L1": "http://fr.wikipedia.org/wiki/Championnat_de_France_de_football_2019-2020",
+    "L2": "http://fr.wikipedia.org/wiki/Championnat_de_France_de_football_de_Ligue_2_2019-2020"
+}
+
+# Retrieve stadiums information for Ligue 1
+stades_ligue1 = retrieve_all_stadium_from_league(url_list, "L1")
+stades_ligue2 = retrieve_all_stadium_from_league(url_list, "L2")
+
+stades = pd.concat(
+    [stades_ligue1, stades_ligue2]
+)
+```
+:::
+
+
+::: {#07bdba68 .cell}
+``` {.python .cell-code}
+stades.head(5)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+Tous les éléments sont en place pour faire une belle carte à ce stade. On
+va utiliser `folium` pour celle-ci, qui est présenté dans la partie
+[visualisation](/conent/visualisation/index.qmd).
+:::
+
+::: {.content-visible when-profile="en"}
+At this stage, everything is in place to create a beautiful map. We will
+use `folium` for this, which is introduced in the
+[visualization](/conent/visualisation/index.qmd) section.
+:::
+
+::: {.content-visible when-profile="fr"}
+## Carte des stades avec `folium` {#cartes-stades-ligue1}
+:::
+
+::: {.content-visible when-profile="en"}
+## Stadium Map with `folium` {#cartes-stades-ligue1-en}
+:::
+
+::: {#map-stadium-location .cell}
+``` {.python .cell-code}
+import geopandas as gpd
+import folium
+
+stades = stades.dropna(subset = ['latitude', 'longitude'])
+stades.loc[:, ['latitude', 'longitude']] = (
+    stades
+    .loc[:, ['latitude', 'longitude']]
+    .astype(float)
+)
+stadium_locations = gpd.GeoDataFrame(
+    stades, geometry = gpd.points_from_xy(stades.longitude, stades.latitude)
+)
+
+center = stadium_locations[['latitude', 'longitude']].mean().values.tolist()
+sw = stadium_locations[['latitude', 'longitude']].min().values.tolist()
+ne = stadium_locations[['latitude', 'longitude']].max().values.tolist()
+
+m = folium.Map(location = center, tiles='openstreetmap')
+
+# I can add marker one by one on the map
+for i in range(0,len(stadium_locations)):
+    folium.Marker(
+        [stadium_locations.iloc[i]['latitude'], stadium_locations.iloc[i]['longitude']],
+        popup=stadium_locations.iloc[i]['stade']
+    ).add_to(m)
+
+m.fit_bounds([sw, ne])
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+La carte obtenue doit ressembler à la suivante :
+:::
+
+::: {.content-visible when-profile="en"}
+The resulting map should look like the following:
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+# Récupérer des informations sur les pokemons
+
+Le prochain exercice pour mettre en pratique le _web scraping_
+consiste à récupérer des informations sur les
+pokemons à partir du
+site internet [pokemondb.net](http://pokemondb.net/pokedex/national).
+
+
+## Version non guidée
+:::
+
+::: {.content-visible when-profile="en"}
+# Retrieving Information on Pokémon
+
+The next exercise to practice _web scraping_
+involves retrieving information on Pokémon
+from the website [pokemondb.net](http://pokemondb.net/pokedex/national).
+
+## Unguided Version
+:::
+
+
+::: {.callout-important}
+:::: {.content-visible when-profile="fr"}
+Comme pour Wikipedia, ce site demande à `request` d'indiquer un paramètre pour contrôler l'_user-agent_. Par exemple, 
+::::
+:::: {.content-visible when-profile="en"}
+As with Wikipedia, this site asks `request` to specify a parameter to control the _user-agent_. For instance,
+::::
+
+```python
+requests.get(... , headers = {'User-Agent': 'Mozilla/5.0'})
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip} 
+## Exercice 2 : Les pokémon (version non guidée)
+
+Pour cet exercice, nous vous demandons d'obtenir différentes informations sur les pokémons :
+
+1. les informations personnelles des __893__ pokemons sur le site internet [pokemondb.net](http://pokemondb.net/pokedex/national).
+   Les informations que nous aimerions obtenir au final dans un `DataFrame` sont celles contenues dans 4 tableaux :
+
+   - Pokédex data
+   - Training
+   - Breeding
+   - Base stats
+
+2. Nous aimerions que vous récupériez également les images de chacun des pokémons et que vous les enregistriez dans un dossier.
+
+* Petit indice : utilisez les modules `request` et [`shutil`](https://docs.python.org/3/library/shutil.html)
+* Pour cette question, il faut que vous cherchiez de vous même certains éléments, tout n'est pas présent dans le TD.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip} 
+## Exercise 2: Pokémon (Unguided Version)
+
+For this exercise, we ask you to obtain various information about Pokémon:
+
+1. The personal information of the __893__ Pokémon on the website [pokemondb.net](http://pokemondb.net/pokedex/national).
+   The information we would like to ultimately obtain in a `DataFrame` is contained in 4 tables:
+
+   - Pokédex data
+   - Training
+   - Breeding
+   - Base stats
+
+2. We would also like you to retrieve images of each Pokémon and save them in a folder.
+
+* A small hint: use the `request` and [`shutil`](https://docs.python.org/3/library/shutil.html) modules.
+* For this question, you will need to research some elements on your own; not everything is covered in the lab.
+
+::::
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Pour la question 1, l'objectif est d'obtenir le code source d'un tableau comme celui qui suit (Pokémon [Nincada](http://pokemondb.net/pokedex/nincada)).
+:::
+
+::: {.content-visible when-profile="en"}
+For question 1, the goal is to obtain the source code of a table like
+the one below (Pokémon [Nincada](http://pokemondb.net/pokedex/nincada)).
+:::
+
+::: {.cell .markdown}
+<div class="grid-col span-md-6 span-lg-4">
+<h2>Pokédex data</h2>
+<table class="vitals-table">
+<tbody>
+<tr>
+<th>National №</th>
+<td><strong>290</strong></td>
+</tr>
+<tr>
+<th>Type</th>
+<td>
+<a class="type-icon type-bug" href="/type/bug">Bug</a> <a class="type-icon type-ground" href="/type/ground">Ground</a> </td>
+</tr>
+<tr>
+<th>Species</th>
+<td>Trainee Pokémon</td>
+</tr>
+<tr>
+<th>Height</th>
+<td>0.5&nbsp;m (1′08″)</td>
+</tr>
+<tr>
+<th>Weight</th>
+<td>5.5&nbsp;kg (12.1&nbsp;lbs)</td>
+</tr>
+<tr>
+<th>Abilities</th>
+<td><span class="text-muted">1. <a href="/ability/compound-eyes" title="The Pokémon's accuracy is boosted.">Compound Eyes</a></span><br><small class="text-muted"><a href="/ability/run-away" title="Enables a sure getaway from wild Pokémon.">Run Away</a> (hidden ability)</small><br></td>
+</tr>
+<tr>
+<th>Local №</th>
+<td>042 <small class="text-muted">(Ruby/Sapphire/Emerald)</small><br>111 <small class="text-muted">(X/Y — Central Kalos)</small><br>043 <small class="text-muted">(Omega Ruby/Alpha Sapphire)</small><br>104 <small class="text-muted">(Sword/Shield)</small><br></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+<div class="grid-col span-md-12 span-lg-4">
+<div class="grid-row">
+<div class="grid-col span-md-6 span-lg-12">
+<h2>Training</h2>
+<table class="vitals-table">
+<tbody>
+<tr>
+<th>EV yield</th>
+<td class="text">
+1 Defense </td>
+</tr>
+<tr>
+<th>Catch rate</th>
+<td>255 <small class="text-muted">(33.3% with PokéBall, full HP)</small></td>
+</tr>
+<tr>
+<th>Base <a href="/glossary#def-friendship">Friendship</a></th>
+<td>70 <small class="text-muted">(normal)</small></td>
+</tr>
+<tr>
+<th>Base Exp.</th>
+<td>53</td>
+</tr>
+<tr>
+<th>Growth Rate</th>
+<td>Erratic</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="grid-col span-md-6 span-lg-12">
+<h2>Breeding</h2>
+<table class="vitals-table">
+<tbody>
+<tr>
+<th>Egg Groups</th>
+<td>
+<a href="/egg-group/bug">Bug</a> </td>
+</tr>
+<tr>
+<th>Gender</th>
+<td><span class="text-blue">50% male</span>, <span class="text-pink">50% female</span></td> </tr>
+<tr>
+<th><a href="/glossary#def-eggcycle">Egg cycles</a></th>
+<td>15 <small class="text-muted">(3,599–3,855 steps)</small>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div class="grid-col span-md-12 span-lg-8">
+<div id="dex-stats"></div>
+<h2>Base stats</h2>
+<div class="resp-scroll">
+<table class="vitals-table">
+<tbody>
+<tr>
+<th>HP</th>
+<td class="cell-num">31</td>
+<td class="cell-barchart">
+<div style="width:17.22%;" class="barchart-bar barchart-rank-2 "></div>
+</td>
+<td class="cell-num">172</td>
+<td class="cell-num">266</td>
+</tr>
+<tr>
+<th>Attack</th>
+<td class="cell-num">45</td>
+<td class="cell-barchart">
+<div style="width:25.00%;" class="barchart-bar barchart-rank-2 "></div>
+</td>
+<td class="cell-num">85</td>
+<td class="cell-num">207</td>
+</tr>
+<tr>
+<th>Defense</th>
+<td class="cell-num">90</td>
+<td class="cell-barchart">
+<div style="width:50.00%;" class="barchart-bar barchart-rank-4 "></div>
+</td>
+<td class="cell-num">166</td>
+<td class="cell-num">306</td>
+</tr>
+<tr>
+<th>Sp. Atk</th>
+<td class="cell-num">30</td>
+<td class="cell-barchart">
+<div style="width:16.67%;" class="barchart-bar barchart-rank-2 "></div>
+</td>
+<td class="cell-num">58</td>
+<td class="cell-num">174</td>
+</tr>
+<tr>
+<th>Sp. Def</th>
+<td class="cell-num">30</td>
+<td class="cell-barchart">
+<div style="width:16.67%;" class="barchart-bar barchart-rank-2 "></div>
+</td>
+<td class="cell-num">58</td>
+<td class="cell-num">174</td>
+</tr>
+<tr>
+<th>Speed</th>
+<td class="cell-num">40</td>
+<td class="cell-barchart">
+<div style="width:22.22%;" class="barchart-bar barchart-rank-2 "></div>
+</td>
+<td class="cell-num">76</td>
+<td class="cell-num">196</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<th>Total</th>
+<td class="cell-total"><b>266</b></td>
+<th class="cell-barchart"></th>
+<th>Min</th>
+<th>Max</th>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+:::
+
+::: {.content-visible when-profile="fr"}
+Pour la question 2, l'objectif est d'obtenir
+les images des pokémons comme dans la @fig
+:::
+
+::: {.content-visible when-profile="en"}
+For question 2, the goal is to obtain
+images of the Pokémon.
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+## Version guidée
+
+Les prochaines parties permettront de faire l'exercice ci-dessus
+étape par étape,
+de manière guidée.
+
+Nous souhaitons tout d'abord obtenir les
+informations personnelles de tous
+les pokemons sur [pokemondb.net](http://pokemondb.net/pokedex/national).
+
+Les informations que nous aimerions obtenir au final pour les pokemons sont celles contenues dans 4 tableaux :
+
+- Pokédex data
+- Training
+- Breeding
+- Base stats
+
+Nous proposons ensuite de récupérer et afficher les images.
+
+### Etape 1: constituer un DataFrame de caractéristiques
+:::
+
+::: {.content-visible when-profile="en"}
+## Guided Version
+
+The following sections will help you complete the above exercise
+step by step,
+in a guided manner.
+
+First, we want to obtain the
+personal information of all
+the Pokémon on [pokemondb.net](http://pokemondb.net/pokedex/national).
+
+The information we would like to ultimately obtain for the Pokémon is contained in 4 tables:
+
+- Pokédex data
+- Training
+- Breeding
+- Base stats
+
+Next, we will retrieve and display the images.
+
+### Step 1: Create a DataFrame of Characteristics
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+## Exercice 2b : Les pokémons (version guidée)
+
+Pour récupérer les informations, le code devra être divisé en plusieurs étapes : 
+
+
+1. Trouvez la page principale du site et la transformer en un objet intelligible pour votre code. Les fonctions suivantes vous seront utiles :
+
+   - `requests.get`
+   - `bs4.BeautifulSoup`
+
+2. A partir de ce code, créer une fonction qui permet de récupérer le copntenu page d'un pokémon à partir de son nom. Vous pouvez nommer cette fonction `get_name`.
+
+3. À partir de la page de `bulbasaur`, obtenez les 4 tableaux qui nous intéressent :
+
+   - on va chercher l'élément suivant : `('table', { 'class' : "vitals-table"})`
+   - puis stocker ses éléments dans un dictionnaire
+
+4. Récupérez par ailleurs la liste de noms des pokémons qui nous permettra de faire une boucle par la suite. Combien trouvez-vous de pokémons ? 
+
+5. Écrivez une fonction qui récupère l'ensemble des informations sur les dix premiers pokémons de la liste et les intègre dans un `DataFrame`.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip}
+## Exercise 2b: Pokémon (guided version)
+
+To retrieve the information, the code must be divided into several steps: 
+
+1. Find the site's main page and transform it into an intelligible object for your code. The following functions will be useful:
+
+   - `requests.get`
+   - `bs4.BeautifulSoup`
+
+2. From this code, create a function that retrieves a pokémon's page content from its name. You can name this function `get_name`.
+
+3. From the `bulbasaur` page, obtain the 4 arrays we're interested in:
+   - look for the following element: `(‘table’, { ‘class’ : “vitals-table”})`
+   - then store its elements in a dictionary
+
+4. Retrieve the list of pokemon names, which will enable us to loop later. How many pokémons can you find? 
+
+5. Write a function that retrieves all the information on the first ten pokémons in the list and integrates it into a `DataFrame`.
+
+::::
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+À l'issue de la question 3,
+vous devriez obtenir une liste de caractéristiques proche de celle-ci :
+:::
+
+::: {.content-visible when-profile="en"}
+At the end of question 3,
+you should obtain a list of characteristics similar to this one:
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+La structure est ici en dictionnaire, ce qui est pratique.
+:::
+
+::: {.content-visible when-profile="en"}
+The structure here is a dictionary, which is convenient.
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Enfin, vous pouvez intégrer les informations 
+des dix premiers pokémons à un
+`DataFrame`, qui aura l'aspect suivant :
+:::
+
+::: {.content-visible when-profile="en"}
+Finally, you can integrate the information 
+of the first ten Pokémon into a
+`DataFrame`, which will look like this:
+:::
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+### Etape 2: récupérer et afficher des photos de Pokémon
+
+Nous aimerions que vous récupériez également les images des 5 premiers pokémons
+et que vous les enregistriez dans un dossier.
+:::
+
+::: {.content-visible when-profile="en"}
+### Step 2: Retrieve and Display Pokémon Photos
+
+We would also like you to retrieve the images of the first 5 Pokémon
+and save them in a folder.
+:::
+
+
+::: {.content-visible when-profile="fr"}
+:::: {.callout-tip}
+## Exercice 2b : Les pokémons (version guidée)
+
+- Les URL des images des pokémons prennent la forme _"https://img.pokemondb.net/artwork/{pokemon}.jpg"_. 
+  Utilisez les modules `requests` et `shutil` pour télécharger 
+  et enregistrer localement les images. 
+- Importez ces images stockées au format JPEG dans `Python` grâce à la fonction `imread` du package `skimage.io`.
+
+::::
+:::
+
+::: {.content-visible when-profile="en"}
+:::: {.callout-tip}
+## Exercise 2b: Pokémon (Guided Version)
+
+- The URLs of Pokémon images take the form _"https://img.pokemondb.net/artwork/{pokemon}.jpg"_. 
+  Use the `requests` and `shutil` modules to download 
+  and save the images locally. 
+- Import these images stored in JPEG format into `Python` using the `imread` function from the `skimage.io` package.
+
+::::
+:::
+
+::: {#5eca4115 .cell}
+``` {.python .cell-code}
+!pip install scikit-image
+```
+:::
+
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+
+
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+
+
+:::
+
+
+
+# `Selenium` : mimer le comportement d'un utilisateur internet
+
+
+::: {.content-visible when-profile="fr"}
+Jusqu'à présent,
+nous avons raisonné comme si nous connaissions toujours l'URL qui nous intéresse.
+De plus, les pages que nous visitons sont __"statiques"__,
+elles ne dépendent pas d'une action ou d'une recherche de l'internaute.
+
+Nous allons voir à présent comment nous en sortir pour remplir
+des champs sur un site _web_ et récupérer ce qui nous intéresse.
+La réaction d'un site _web_ à l'action d'un utilisateur passe régulièrement par
+l'usage de `JavaScript` dans le monde du développement _web_.
+Le _package_ [Selenium](https://pypi.python.org/pypi/selenium) permet
+de reproduire, depuis un code automatisé, le comportement
+manuel d'un utilisateur. Il permet ainsi
+d'obtenir des informations du site qui ne sont pas dans le
+code `HTML` mais qui apparaissent uniquement à la suite de
+l'exécution de script `JavaScript` en arrière-plan.
+
+`Selenium` se comporte comme un utilisateur _lambda_ sur internet :
+il clique sur des liens, il remplit des formulaires, etc.
+:::
+
+::: {.content-visible when-profile="en"}
+Until now,
+we have assumed that we always know the URL we are interested in.
+Additionally, the pages we visit are __"static"__,
+they do not depend on any action or search by the user.
+
+We will now see how to fill in fields on a website and retrieve the information we are interested in.
+The reaction of a website to a user's action often involves the use of `JavaScript` in the world of web development.
+The [Selenium](https://pypi.python.org/pypi/selenium) package allows
+you to automate the behavior of a manual user from within your code.
+It enables you to obtain information from a site that is not in the
+`HTML` code but only appears after
+the execution of `JavaScript` scripts in the background.
+
+`Selenium` behaves like a regular internet user:
+it clicks on links, fills out forms, etc.
+:::
+
+::: {.content-visible when-profile="fr"}
+## Premier exemple en scrapant un moteur de recherche
+
+Dans cet exemple, nous allons essayer d'aller sur le
+site de [Bing Actualités](https://www.bing.com/news)
+et entrer dans la barre de recherche un sujet donné.
+Pour tester, nous allons faire une recherche avec le mot-clé __"Trump"__.
+
+L'installation de `Selenium` nécessite d'avoir `Chromium` qui est un
+navigateur Google Chrome minimaliste.
+La version de [chromedriver](https://sites.google.com/a/chromium.org/chromedriver/)
+doit être `>= 2.36` et dépend de la version de `Chrome` que vous avez sur votre environnement
+de travail. Pour installer cette version minimaliste de `Chrome` sur un environnement
+`Linux`, vous pouvez vous référer à l'encadré dédié.
+:::
+
+::: {.content-visible when-profile="en"}
+## First Example: Scraping a Search Engine
+
+In this example, we will try to go to the
+[Bing News](https://www.bing.com/news) site
+and enter a given topic in the search bar.
+To test, we will search with the keyword __"Trump"__.
+
+Installing `Selenium` requires `Chromium`, which is a
+minimalist version of the Google Chrome browser.
+The version of [chromedriver](https://sites.google.com/a/chromium.org/chromedriver/)
+must be `>= 2.36` and depends on the version of `Chrome` you have on your working environment.
+To install this minimalist version of `Chrome` on a
+`Linux` environment, you can refer to the dedicated section.
+:::
+
+
+::: {.callout-important}
+## Installation de `Selenium`
+
+::: {.content-visible when-profile="fr"}
+Sur `Colab`, vous pouvez utiliser les commandes suivantes :
+:::
+
+::: {.content-visible when-profile="en"}
+On `Colab`, you can use the following commands:
+:::
+
+::: {#74ca2d7f .cell}
+``` {.python .cell-code}
+!sudo apt-get update
+!sudo apt install -y unzip xvfb libxi6 libgconf-2-4 -y
+!sudo apt install chromium-chromedriver -y
+!cp /usr/lib/chromium-browser/chromedriver /usr/bin
+```
+:::
+
+
+<br>
+
+::: {.content-visible when-profile="fr"}
+Si vous êtes sur le `SSP Cloud`, vous pouvez
+exécuter les commandes suivantes :
+:::
+
+::: {.content-visible when-profile="en"}
+If you are on the `SSP Cloud`, you can
+run the following commands:
+:::
+
+::: {#db7fdb59 .cell}
+``` {.python .cell-code}
+!wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
+!sudo apt-get update
+!sudo -E apt-get install -y /tmp/chrome.deb
+!pip install chromedriver-autoinstaller selenium
+
+import chromedriver_autoinstaller
+path_to_web_driver = chromedriver_autoinstaller.install()
+```
+:::
+
+
+<br>
+
+::: {.content-visible when-profile="fr"}
+Vous pouvez ensuite installer `Selenium`.
+Par exemple, depuis une
+cellule de `Notebook` :
+:::
+
+::: {.content-visible when-profile="en"}
+You can then install `Selenium`.
+For example, from a
+`Notebook` cell:
+:::
+
+
+
+:::
+
+::: {.content-visible when-profile="fr"}
+En premier lieu, il convient d'initialiser le comportement
+de `Selenium` en répliquant les paramètres
+du navigateur. Pour cela, on va d'abord initialiser
+notre navigateur avec quelques options :
+:::
+
+::: {.content-visible when-profile="en"}
+First, you need to initialize the behavior
+of `Selenium` by replicating the browser settings. To do this, we will first initialize our browser with a few options:
+:::
+
+::: {#46c4284d .cell}
+``` {.python .cell-code}
+import time
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--disable-dev-shm-usage')
+#chrome_options.add_argument('--verbose')
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+Puis on lance le navigateur :
+:::
+
+::: {.content-visible when-profile="en"}
+Then we launch the browser:
+:::
+
+::: {#d74bdf8a .cell}
+``` {.python .cell-code}
+from selenium.webdriver.chrome.service import Service
+service = Service(executable_path=path_to_web_driver)
+
+browser = webdriver.Chrome(
+    service=service,
+    options=chrome_options
+)
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On va sur le site de `Bing Actualités`,
+et on lui indique le mot-clé que nous souhaitons chercher.
+En l'occurrence, on s'intéresse aux actualités de Donald Trump.
+Après avoir inspecté la page depuis les outils de développement du navigateur,
+on voit que la barre de recherche est un élément du code appelé `q` (comme _query_).
+On va ainsi demander à `selenium` de chercher cet élément:
+:::
+
+::: {.content-visible when-profile="en"}
+We go to the `Bing News` site,
+and we specify the keyword we want to search for.
+In this case, we're interested in news about Donald Trump.
+After inspecting the page using the browser's developer tools,
+we see that the search bar is an element in the code called `q` (as in _query_).
+So we'll ask `selenium` to search for this element:
+:::
+
+::: {#329d1098 .cell}
+``` {.python .cell-code}
+browser.get('https://www.bing.com/news')
+```
+:::
+
+
+
+
+::: {#2b223345 .cell}
+``` {.python .cell-code}
+search = browser.find_element("name", "q")
+print(search)
+print([search.text, search.tag_name, search.id])
+
+# on envoie à cet endroit le mot qu'on aurait tapé dans la barre de recherche
+search.send_keys("Trump")
+
+search_button = browser.find_element("xpath", "//input[@id='sb_form_go']")
+search_button.click()
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+`Selenium` permet de capturer l'image qu'on verrait dans le navigateur
+avec `get_screenshot_as_png`. Cela peut être utile pour vérifier qu'on
+a fait la bonne action :
+:::
+
+::: {.content-visible when-profile="en"}
+`Selenium` allows you to capture the image you would see in the browser
+with `get_screenshot_as_png`. This can be useful to check if you
+have performed the correct action:
+:::
+
+
+
+
+
+
+
+::: {.content-visible when-profile="fr"}
+Enfin, on peut extraire les résultats. Plusieurs
+méthodes sont disponibles. La méthode la plus
+pratique, lorsqu'elle est disponible,
+est d'utiliser le `XPath` qui est un chemin
+non ambigu pour accéder à un élément. En effet,
+plusieurs éléments peuvent partager la même classe ou
+le même attribut, ce qui peut faire qu'une recherche
+de ce type renvoie plusieurs échos.
+Pour déterminer le `XPath` d'un objet, les outils
+de développeur de votre site _web_ sont pratiques.
+Par exemple, sous `Firefox`, une fois que vous
+avez trouvé un élément dans l'inspecteur, vous
+pouvez faire `click droit > Copier > XPath`.
+:::
+
+::: {.content-visible when-profile="en"}
+Finally, we can extract the results. Several
+methods are available. The most
+convenient method, when available,
+is to use `XPath`, which is an unambiguous path
+to access an element. Indeed,
+multiple elements can share the same class or
+the same attribute, which can cause such a search
+to return multiple matches.
+To determine the `XPath` of an object, the developer tools
+of your web browser are handy.
+For example, in `Firefox`, once you
+have found an element in the inspector, you
+can right-click > Copy > XPath.
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Enfin, pour mettre fin à notre session, on demande à `Python` de quitter le navigateur:
+:::
+
+::: {.content-visible when-profile="en"}
+Finally, to end our session, we ask `Python` to close the browser:
+:::
+
+::: {#e0107f86 .cell}
+``` {.python .cell-code}
+browser.quit()
+```
+:::
+
+
+::: {.content-visible when-profile="fr"}
+On a obtenu les résultats suivants :
+:::
+
+::: {.content-visible when-profile="en"}
+We get the following results:
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+Les autres méthodes utiles de `Selenium`:
+
+| Méthode | Résultat |
+|-------------------------------|--------------|
+| `find_element(****).click()` | Une fois qu'on a trouvé un élément réactif, notamment un bouton, on peut cliquer dessus pour activer une nouvelle page |
+| `find_element(****).send_keys("toto")` | Une fois qu'on a trouvé un élément, notamment un champ où s'authentifier, on peut envoyer une valeur, ici _"toto"_.
+:::
+
+::: {.content-visible when-profile="en"}
+Other useful `Selenium` methods:
+
+| Method | Result |
+|-------------------------------|--------------|
+| `find_element(****).click()` | Once you have found a reactive element, such as a button, you can click on it to navigate to a new page |
+| `find_element(****).send_keys("toto")` | Once you have found an element, such as a field to enter credentials, you can send a value, in this case _"toto"_.
+:::
+
+
+
+::: {.content-visible when-profile="fr"}
+## Exercice supplémentaire
+
+Pour découvrir une autre application possible du _web scraping_, vous pouvez également vous lancer dans le sujet 5 de l'édition 2023 d'un hackathon non compétitif organisé par l'Insee :
+
+- Sur [`Github`](https://github.com/InseeFrLab/funathon2023_sujet5)
+- Sur le [`SSPCloud`](https://www.sspcloud.fr/formation?search=funat&path=%5B%22Funathon%202023%22%5D)
+
+Le contenu de la section NLP du cours pourra vous être utile pour la seconde partie du sujet !
+:::
+
+::: {.content-visible when-profile="en"}
+## Additional Exercise
+
+To explore another application of web scraping, you can also tackle topic 5 of the 2023 edition of a non-competitive hackathon organized by Insee:
+
+- On [`Github`](https://github.com/InseeFrLab/funathon2023_sujet5)
+- On [`SSPCloud`](https://www.sspcloud.fr/formation?search=funat&path=%5B%22Funathon%202023%22%5D)
+
+The NLP section of the course may be useful for the second part of the topic!
+:::
+
+---
+jupyter:
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---

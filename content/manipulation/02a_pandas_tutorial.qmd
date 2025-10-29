@@ -1,0 +1,33 @@
+---
+title: "Introduction à Pandas"
+author: Lino Galiana
+tags:
+  - Pandas
+  - Pollution
+  - Ademe
+  - Tutoriel
+  - Manipulation
+categories:
+  - Tutoriel
+  - Manipulation
+aliases: ../pandas.html
+description: |
+  `Pandas` est l'élément central de l'écosystème `Python` pour la _data science_. 
+  Le succès récent de `Python` dans l'analyse de données tient beaucoup à `Pandas` qui a permis d'importer la
+  logique `SQL` dans le langage `Python`. `Pandas` embarque énormément de
+  fonctionalités qui permettent d'avoir des chaînes de traitement efficaces pour
+  traiter des données de volumétrie moyenne (jusqu'à quelques Gigas). Au-delà
+  de cette volumétrie, il faudra se tourner vers d'autres solutions
+  (`DuckDB`, `Dask`, `Polars`, `Spark`...).
+bibliography: ../../reference.bib
+image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/panda_stretching.png
+links:
+- icon: journal-text
+  name: Documentation Pandas
+  url: https://pandas.pydata.org/docs/
+---
+
+La partie `Pandas` a évolué récemment. Vous pouvez retrouver les contenus liés à `Pandas` dans les chapitres suivants:
+
+- [Introduction à `Pandas` et à la logique du _DataFrame_](/content/manipulation/02_pandas_intro.qmd) ;
+- [Statistiques par groupe et association de plusieurs jeux de données avec `Pandas`](/content/manipulation/02_pandas_suite.qmd) ;

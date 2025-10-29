@@ -1,0 +1,96 @@
+project:
+  type: website
+  render:
+    - index.qmd
+    - 404.qmd
+    - content/getting-started/index.qmd
+    - content/getting-started/01_environment.qmd
+    - content/getting-started/02_data_analysis.qmd
+    - content/getting-started/03_revisions.qmd
+    - content/annexes/about.qmd
+    - content/annexes/evaluation.qmd
+    - content/annexes/corrections.qmd
+
+profile:
+  default: fr
+  group: [fr, en]
+
+
+
+
+# WEBSITE ARCHITECTURE ---------------------
+
+
+website:
+  page-navigation: true
+  back-to-top-navigation: true
+  reader-mode: true
+  navbar:
+    background: "white"
+    search: true
+    title: false
+    left:
+      - file: index.qmd
+        text: Home
+      - sidebar:introduction
+      - sidebar:appendix
+    tools:
+      - icon: github
+        href: https://github.com/linogaliana/python-datascientist
+  comments:
+    giscus:
+      repo: linogaliana/python-datascientist
+  twitter-card: true
+  site-url: https://pythonds.linogaliana.fr
+  repo-url: https://github.com/linogaliana/python-datascientist
+  repo-branch: master
+  issue-url: https://github.com/linogaliana/python-datascientist/issues/new
+  repo-actions: [edit, issue]
+
+
+format:
+  html:
+    include-after-body: build/js/mac.html
+    respect-user-color-scheme: true
+    theme:
+      light: [cosmo, styles/custom.scss, styles/custom-light.scss]
+      dark: [cosmo, styles/custom.scss, styles/custom-dark.scss]
+    css: styles/styles.css
+    toc: true
+    code-overflow: wrap
+    grid:
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+    anchor-sections: true
+  ipynb: default
+
+
+# PAGE OPTIONS ---------------------
+
+filters:
+  - at: pre-ast
+    path: _extensions/linogaliana/lang-switch/lang-notebook.lua
+  - at: pre-ast
+    path: _extensions/linogaliana/callout/callout-notebook.lua
+  - include-code-files
+  - build/replace-title.lua
+  - _extensions/linogaliana/lang-switch/button.lua
+
+crossref:
+  chapters: true
+
+author: Lino Galiana
+date: today
+date-format: iso
+page-layout: article
+title-block-banner: "#e9f3fa"
+number-sections: true
+wrap: preserve
+format-links: false
+validate-yaml: false
+keep-ipynb: true
+lightbox: auto
+google-scholar: true
+commentable: true
+highlight-style: a11y

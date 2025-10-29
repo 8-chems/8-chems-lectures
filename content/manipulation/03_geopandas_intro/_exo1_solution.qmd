@@ -1,0 +1,108 @@
+```{python}
+#| output: false
+#| echo: true
+
+# 1. Chargement des données de Cartiflette
+from cartiflette import carti_download
+communes_borders = carti_download(
+    crs = 4326,
+    values = ["75", "92", "93", "94"],
+    borders="COMMUNE",
+    vectorfile_format="geojson",
+    filter_by="DEPARTEMENT",
+    source="EXPRESS-COG-CARTO-TERRITOIRE",
+    year=2022)
+```
+
+
+::: {.content-visible when-profile="fr"}
+
+La visualisation proposée à la question permet de voir que notre _DataFrame_  comporte la colonne _geometry_ qui contient les informations nécessaires pour connaître les contours communaux.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+The visualization provided in the question shows that our `GeoDataFrame` includes a `geometry` column containing the necessary information to determine the municipal boundaries.
+
+:::
+
+```{python}
+#| output: false
+# Question 2
+communes_borders.head()
+```
+
+```{python}
+# Question 3
+communes_borders.crs
+```
+
+::: {.content-visible when-profile="fr"}
+Les données sont en WGS84, on les reprojette en Lambert 93
+:::
+
+::: {.content-visible when-profile="en"}
+The data is in WGS84, we reproject it to Lambert 93
+:::
+
+
+```{python}
+#| echo: false
+
+# Question 4
+ax = communes_borders[communes_borders['INSEE_DEP'] == "92"].boundary.plot()
+ax.set_axis_off()
+```
+
+::: {.content-visible when-profile="fr"}
+
+A la question 5, on remarque facilement le problème pour Paris: il manque les limites des arrondissements. Cela appauvrit grandement la carte de Paris.
+
+:::
+
+::: {.content-visible when-profile="en"}
+
+In question 5, the issue for Paris is easily noticeable: the boundaries of the arrondissements are missing. This significantly reduces the detail of the map of Paris.
+
+:::
+
+```{python}
+#| echo: false
+
+# Question 5
+ax = communes_borders[communes_borders['INSEE_DEP'] == "75"].boundary.plot()
+ax.set_axis_off()
+```
+
+::: {.content-visible when-profile="fr"}
+A l'issue de la question 6, on obtient la carte attendue pour Paris intramuros:
+:::
+
+::: {.content-visible when-profile="en"}
+At the end of question 6, we obtain the expected map for inner Paris:
+:::
+
+```{python}
+#| output: false
+
+# 6. Chargement des données de Cartiflette
+petite_couronne = carti_download(
+    crs = 4326,
+    values = ["75", "92", "93", "94"],
+    borders="COMMUNE_ARRONDISSEMENT",
+    vectorfile_format="geojson",
+    filter_by="DEPARTEMENT",
+    source="EXPRESS-COG-CARTO-TERRITOIRE",
+    year=2022)
+    
+petite_couronne.crs
+petite_couronne = petite_couronne.to_crs(2154)
+petite_couronne.crs
+```
+
+```{python}
+ax = petite_couronne[petite_couronne['INSEE_DEP'] == "75"].boundary.plot()
+ax.set_axis_off()
+```
+

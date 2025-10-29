@@ -1,0 +1,144 @@
+/*-- scss:defaults --*/
+$main-color-danger: #ff0039;
+$main-color-info: #007bff80;
+$main-color-warning: #ffc10780 ;
+$main-color-success: #3fb618;
+$code-bg: #f7f7f7;
+$code-color: #9954bb;
+$color-bg-featured: #2C5682 ;
+$gold-color: #FFD78B ;
+$hero-banner-bg: darken($color-bg-featured, 20%);
+$hero-banner-font-color: white;
+
+/*-- scss:rules --*/
+
+
+/* -------------------
+HOMEPAGE BANNER 
+---------------------*/
+
+#hero-banner a {
+	color: $gold-color !important;
+}
+
+#hero-banner p code:not(.sourceCode), #hero-banner li code:not(.sourceCode), #hero-banner td code:not(.sourceCode) {
+	background-color: #15293d;
+	color: #e0e4e4;
+}
+
+#hero-banner strong {
+  color: $gold-color;
+}
+
+#hero-banner {
+    background-color: $hero-banner-bg;
+    color: $hero-banner-font-color;
+}
+
+#hero-banner  p code:not(.sourceCode) {
+  background-color: lighten($hero-banner-bg, 2%);
+  color: #e0e4e4;
+}
+
+
+.quarto-title-banner {
+  background-size: cover;
+  background-position: center;
+  color: white;
+  box-shadow: inset 0 0 0 1000px $color-bg-featured ;
+}
+
+#title-block-header.quarto-title-block.default .quarto-title .title {
+	margin-bottom: 0;
+  color: white;
+}
+
+#title-block-header.quarto-title-block.default p code:not(.sourceCode) {
+	background-color: #f7f7f7;
+  color: $gold-color;
+	padding: .2em;
+}
+
+
+/*-------------------
+    CUSTOM BOXES
+--------------------*/
+
+/* Box heading color */
+.alert-info > .alert-heading {
+	background-color: lighten( $main-color-info, 40% ) ;
+}
+.alert-success > .alert-heading {
+	background-color: lighten( $main-color-success, 40% ) ;
+}
+.alert-warning > .alert-heading {
+	background-color: lighten( $main-color-warning, 40% ) ;
+}
+.alert-danger > .alert-heading {
+	background-color: lighten( $main-color-danger, 40% );
+}
+
+
+/* LEFT BORDERS */
+.alert-danger {
+  border-left: .2rem solid $main-color-danger;
+}
+.alert-warning {
+  border-left:.2rem solid $main-color-warning;
+}
+.alert-info {
+  border-left:.2rem solid $main-color-info;
+}
+.alert-success {
+  border-left:.2rem solid $main-color-success;
+}
+
+
+
+/* Text color */
+.alert-success,
+.alert-danger,
+.alert-warning,
+.alert-info {
+	color: $body-color;
+}
+
+
+
+.button-cta {
+  background-color: $color-bg-featured; /* Change this to your preferred color */
+  color: white; /* Text color */
+  padding: 10px 20px; /* Padding around the text */
+  border-radius: 5px; /* Rounded corners */
+  text-decoration: none; /* Remove underline */
+}
+
+.btn {
+  color: white;
+}
+
+.gridcard-title {
+  color: $color-bg-featured ;
+}
+
+.btn-launch {
+  background-color: $color-bg-featured;
+  border: 3px solid $color-bg-featured;
+  color: $gold-color;
+}
+
+.btn-launch:hover {
+  background-color: $gold-color; /* Grey background on hover */
+  color: $color-bg-featured; /* Keep text color white on hover */
+  border-color: $color-bg-featured; /* Grey border on hover */
+}
+
+/*
+.gridcard-item {
+  box-shadow: 0 0 0 1px $color-bg-featured;
+}
+
+.gridcard-item:hover {
+  box-shadow: 0 0 0 1px $color-bg-featured;
+}
+*/
