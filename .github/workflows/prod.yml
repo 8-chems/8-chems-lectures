@@ -44,7 +44,7 @@ jobs:
       # Step 7: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v6   # use latest version
+        uses: peaceiris/actions-gh-pages@v4   # use latest version
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_site          # folder with built site
