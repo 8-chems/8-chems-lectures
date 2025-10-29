@@ -32,6 +32,7 @@ website:
   page-navigation: true
   back-to-top-navigation: true
   reader-mode: true
+  favicon: content/images/favicon.ico
   navbar:
     background: "white"
     search: true
