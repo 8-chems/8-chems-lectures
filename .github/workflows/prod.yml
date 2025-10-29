@@ -29,7 +29,7 @@ jobs:
         run: |
           pip install uv
           uv pip install -r pyproject.toml --system
-          chmod +x requirements.sh
+          chmod +x ./build/requirements.sh
           ./build/requirements.sh
           python -m spacy download en_core_web_sm || true
 
