@@ -9,9 +9,21 @@ project:
 resources:
   - pdfjs/
 
+
 profile:
   default: en
-  group: [fr, en]
+  group: [ fr, en ]
+  en:
+    project:
+      output-dir: _site  # English goes to root
+    website:
+      title: "Fundamentals of Data Science"
+
+  fr:
+    project:
+      output-dir: _site/fr  # French goes to subfolder
+    website:
+      title: "Mon Site"
 
 
 execute:
