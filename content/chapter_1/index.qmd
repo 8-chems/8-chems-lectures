@@ -31,7 +31,7 @@ bibliography: ../../reference.bib
   frameborder="0">
 </iframe>
 
-{{< pdf pdfs/courses/fds/lectures/chapter_1.pdf width="100%" height="600px" >}}
+<iframe src="/pdfs/courses/fds/lectures/chapter_1.pdf" width="100%" height="600px"></iframe>
 
 ::: {.content-visible when-profile="en"}
 # References {-}

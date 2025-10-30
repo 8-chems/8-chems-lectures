@@ -29,8 +29,7 @@ Some contenent here.
 
 :::
 
-{{< pdf pdfs/courses/fds/lectures/chapter_2.pdf width="100%" height="600px" >}}
-
+<iframe src="/pdfs/courses/fds/lectures/chapter_2.pdf" width="100%" height="600px"></iframe>
 
 
 ::: {.content-visible when-profile="en"}
