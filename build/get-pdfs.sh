@@ -1,1 +1,10 @@
-curl -s "https://api.github.com/repos/8-chems/myportfolio-src/git/trees/main?recursive=1" | jq -r '.tree[]? | select(.path|endswith(".pdf")) | .download_url' | xargs -I {} sh -c 'mkdir -p "pdfs/$(dirname "$(basename "{}")")"; curl -L -o "pdfs/$(basename "{}")" "{}"'
+# Get all PDF paths from the repository
+curl -s "https://api.github.com/repos/8-chems/myportfolio-src/git/trees/main?recursive=1" \
+  | jq -r '.tree[]? | select(.path | endswith(".pdf")) | .path' \
+  | while read -r pdf_path; do
+      # Create directory structure
+      mkdir -p "pdfs/$(dirname "$pdf_path")"
+      # Download the file
+      curl -L -o "pdfs/$pdf_path" \
+        "https://raw.githubusercontent.com/8-chems/myportfolio-src/main/$pdf_path"
+    done
