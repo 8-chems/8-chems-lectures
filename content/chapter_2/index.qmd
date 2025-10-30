@@ -29,8 +29,7 @@ Some contenent here.
 
 :::
 
-<iframe src="/pdfs/courses/fds/lectures/chapter_2.pdf" width="100%" height="600px"></iframe>
-
+{{< slide-viewer /pdfs/courses/fds/lectures/chapter_2.pdf title="Chapter 1: Introduction" height="650px" >}}
 
 ::: {.content-visible when-profile="en"}
 
