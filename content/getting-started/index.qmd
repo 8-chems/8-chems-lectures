@@ -1,24 +1,13 @@
 ---
 title: Introduction
 title-en: Introduction
-description: "Cette introduction présente l'objectif du cours,les partis-pris pédagogiques, le fil conducteur de cet enseignement ainsi que les modalités pratiques de celui-ci."
-description-en: "This introduction presents the course objective, pedagogical approach, the main theme of this of the course, as well as the practical practical details."
+description: " "
+description-en: "This chapter introduces data science, and its different approaches."
 image: https://ensae-reproductibilite.github.io/website/egg.jpg
 bibliography: ../../reference.bib
 ---
 
-:::: {.content-visible when-profile="fr"}
 
-::: {.callout-tip collapse="true"}
-## Compétences à l’issue de ce chapitre
-
-- Comprendre pourquoi Python est devenu incontournable dans le domaine de la _data science_ et du _data engineering_, notamment grâce à sa simplicité, sa lisibilité et son écosystème communautaire riche ;
-- Identifier la manière dont Python peut vous assister dans les différentes étapes d'un projet de valorisation de données : structuration, exploration, modélisation, communication de résultats... ;
-- Appréhender l’importance d'une démarche reproductible, rigoureuse et scientifique dans la conduite de projets de _data science_ ou de _data engineering_ et les moyens pour cela (_notebooks Jupyter_, open data, environnements standardisés...) ;
-- Comprendre l’objet et les partis-pris pédagogiques du cours ainsi que son fil conducteur.
-:::
-
-::::
 
 :::: {.content-visible when-profile="en"}
 
@@ -33,23 +22,14 @@ bibliography: ../../reference.bib
 
 ::::
 
-{{< include "/content/getting-started/intro/_intro.qmd" >}}
-
-{{< include "/content/getting-started/intro/_pourquoi_python.qmd" >}}
-
-{{< include "/content/getting-started/intro/_pourquoi_python_data.qmd" >}}
-
-{{< include "/content/getting-started/intro/_pourquoi_python_ia.qmd" >}}
-
-{{< include "/content/getting-started/intro/_objectif.qmd" >}}
-
-{{< include "/content/getting-started/intro/_plan.qmd" >}}
-
-
-
-::: {.content-visible when-profile="fr"}
-# Références {-}
-:::
+ 
+<iframe 
+  src="pdfjs/web/viewer.html?file=https://raw.githubusercontent.com/8-chems/myportfolio-src/main/courses/fds/lectures/chapter_1.pdf"
+  width="100%"
+  height="600px"
+  style="border: 1px solid #ccc; border-radius: 8px;"
+  frameborder="0">
+</iframe>
 
 ::: {.content-visible when-profile="en"}
 # References {-}

@@ -3,22 +3,14 @@ project:
   render:
     - index.qmd
     - 404.qmd
-    - content/getting-started/index.qmd
-    - content/manipulation/index.qmd
-    - content/manipulation/01_numpy.qmd
-    - content/manipulation/02_pandas_intro.qmd
-    - content/manipulation/02_suite_intro.qmd
-    - content/manipulation/02b_pandas_TP.qmd
-    - content/manipulation/02a_pandas_tutorial.qmd
-    - content/manipulation/03_geopandas_intro.qmd
-    - content/manipulation/04a_webscraping_TP.qmd
-    - content/manipulation/04c_API_TP.qmd
-    - content/manipulation/04b_regex_TP.qmd
-    - content/manipulation/05_parquet_s3.qmd
+    - content/getting-started/*.qmd
+    - content/manipulation/*.qmd
 
+resources:
+  - pdfjs/
 
 profile:
-  default: fr
+  default: en
   group: [fr, en]
 
 
@@ -59,6 +51,7 @@ website:
 
 format:
   html:
+    raw-html: true
     include-after-body: build/js/mac.html
     respect-user-color-scheme: true
     theme:

@@ -24,7 +24,7 @@ end
 function reminder_badges(args, kwargs)
 
   -- Get the language from the environment variable
-  local lang = os.getenv("QUARTO_PROFILE") or "fr" -- Default to "fr" if QUARTO_PROFILE is not set
+  local lang = os.getenv("QUARTO_PROFILE") or "en" -- Default to "en" if QUARTO_PROFILE is not set
   local langpath = ""
   quarto.log.output("Language: " .. lang)
 
@@ -34,6 +34,8 @@ function reminder_badges(args, kwargs)
   -- Get the current file path
   local inputfilename = quarto.doc.input_file
   local dirname = quarto.project.directory
+  quarto.log.output("DEBUG: quarto.project.directory = " .. tostring(quarto.project.directory))
+  quarto.log.output("DEBUG: quarto.doc.input_file = " .. tostring(quarto.doc.input_file))
   dirname = escape_pattern(dirname)
 
   -- Compute the relative path from the project root
