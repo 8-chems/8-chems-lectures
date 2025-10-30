@@ -3,8 +3,8 @@ project:
   render:
     - index.qmd
     - 404.qmd
-    - content/getting-started/*.qmd
-    - content/manipulation/*.qmd
+    - content/chapter_1/*.qmd
+    - content/chapter_2/*.qmd
 
 resources:
   - pdfjs/
@@ -32,26 +32,27 @@ website:
     left:
       - file: index.qmd
         text: Home
-      - sidebar:introduction
-      - sidebar:manipulation
+      - sidebar:chapter_1
+      - sidebar:chapter_2
 
 
     tools:
       - icon: github
-        href: https://github.com/linogaliana/python-datascientist
+        href: https://github.com/8-chems/lectures
   comments:
     giscus:
-      repo: linogaliana/python-datascientist
+      repo: 8-chems/lectures
   twitter-card: true
-  site-url: https://pythonds.linogaliana.fr
-  repo-url: https://github.com/linogaliana/python-datascientist
+  site-url: https://8-chems.github.io
+  repo-url: https://github.com/8-chems/lectures
   repo-branch: main
-  issue-url: https://github.com/linogaliana/python-datascientist/issues/new
+  issue-url: https://github.com/8-chems/lectures/issues/new
   repo-actions: [edit, issue]
 
 format:
   html:
     raw-html: true
+    embedpdf: true
     include-after-body: build/js/mac.html
     respect-user-color-scheme: true
     theme:

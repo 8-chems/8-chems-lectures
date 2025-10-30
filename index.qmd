@@ -11,8 +11,8 @@ image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/kiddos.png
 listing:
     id: sample-listings
     contents:
-        - "content/getting-started/index.qmd"
-        - "content/getting-started/index2.qmd"
+        - "content/chapter_1/index.qmd"
+        - "content/chapter_2/index.qmd"
 
     type: grid
     sort: "number"
@@ -55,7 +55,7 @@ as _notebooks_ [`Jupyter` {{< iconify simple-icons:jupyter >}}](https://en.wikip
 ```{=html}
 <div class="lang-switch-button" style="text-align:right; margin-top:1rem; margin-bottom:1rem;">
   <a href="/index.html" class="button-cta">
-    <button class="btn"><i class="fa fa-language"></i> Passer à la version française
+    <button class="btn disabled"><i class="fa fa-language"></i> La version francaise n'est pas disponible.
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20" style="vertical-align: middle; margin-left: 0.5em; display: inline-block;"><mask id="circleFlagsLangFr"><circle cx="256" cy="256" r="256" fill="#fff"/></mask><g mask="url(#circleFlagsLangFr)"><path fill="#0055A4" d="M0 0h512v512H0z"/><path fill="#fff" d="M170.7 0h170.6v512H170.7z"/><path fill="#EF4135" d="M341.3 0H512v512H341.3z"/></g></svg>
     </button>
   </a>
@@ -66,7 +66,7 @@ as _notebooks_ [`Jupyter` {{< iconify simple-icons:jupyter >}}](https://en.wikip
 
 <br>
 
-[Get Started](/content/getting-started/index.qmd){.btn-action-primary .btn-action .btn .btn-lg .w-100 role="button"}
+[Get Started](/content/chapter_1/index.qmd){.btn-action-primary .btn-action .btn .btn-lg .w-100 role="button"}
 
 
 ::::

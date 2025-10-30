@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 0: we get the pdf files.
+      run: |
+        chmod +x ./build/get-pdfs.sh
+        sudo ./build/get-pdfs.sh
+
       # Step 1: Checkout the repository
       - uses: actions/checkout@v4
 
@@ -33,13 +38,9 @@ jobs:
           sudo ./build/requirements.sh
           python -m spacy download en_core_web_sm || true
 
-      # Step 5: Render French profile
-      - name: Render French site
-        run: quarto render  --no-execute  --profile fr --to html
-
       # Step 6: Render English profile
       - name: Render English site
-        run: quarto render  --no-execute  --profile en --to html
+        run: quarto render  --no-execute  --to html
 
       # Step 7: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages

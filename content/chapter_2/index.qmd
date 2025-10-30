@@ -1,0 +1,85 @@
+---
+title: "Data Preprocessing"
+title-en: "Data Pre-processing"
+author: Chemseddine Berbague
+categories:
+  - Pre-Processing
+description: |
+  
+description-en: |
+    Some description goes here :D.
+
+
+bibliography: ../../reference.bib
+image: https://minio.lab.sspcloud.fr/lgaliana/generative-art/pythonds/panda.png
+---
+
+
+::: {.content-visible when-profile="en"}
+
+Some description goes here.
+:::
+
+
+::: {.content-visible when-profile="en"}
+
+## Summary of that section {.unnumbered}
+
+Some contenent here.
+
+:::
+
+{{< pdf pdfs/courses/chapter_2.pdf width="100%" height="600px" >}}
+
+
+
+::: {.content-visible when-profile="en"}
+
+## Exercises {.unnumbered}
+
+Some exercises here.
+
+:::
+
+
+{{< badges
+    fpath="/content/manipulation/index.qmd"
+    printMessage="false"
+>}}
+
+
+
+::: {.content-visible when-profile="en"}
+
+## Going further {.unnumbered}
+
+This course does not really address issues of volume or speed of 
+computation. 
+`Pandas` can show its limits in this area with large datasets
+(several gigabytes).
+
+It is therefore interesting to consider:
+
+* The book [Modern Pandas](https://tomaugspurger.github.io/modern-1-intro.html)
+for additional insights on performance with `Pandas`;
+* The question of
+[sparse objects](https://chrisalbon.com/machine_learning/vectors_matrices_and_arrays/create_a_sparse_matrix/);
+* The _packages_ [`Dask`](https://dask.org/) or [`Polars`](https://ssphub.netlify.app/post/polars/) to speed up computations;
+* [`DuckDB`](https://duckdb.org/docs/api/python/overview.html) for very efficient SQL queries;
+* [`PySpark`](https://spark.apache.org/docs/latest/api/python/index.html) for very large datasets.
+
+:::
+
+
+
+::: {.content-visible when-profile="en"}
+
+### References {.unnumbered}
+
+Here is a selective bibliography of interesting books
+complementary to the chapters in the "Manipulation" section of this course:
+
+:::
+
+::: {#refs}
+:::

@@ -1,0 +1,1 @@
+curl -s "https://api.github.com/repos/8-chems/myportfolio-src/git/trees/main?recursive=1" | jq -r '.tree[]? | select(.path|endswith(".pdf")) | .download_url' | xargs -I {} sh -c 'mkdir -p "pdfs/$(dirname "$(basename "{}")")"; curl -L -o "pdfs/$(basename "{}")" "{}"'
