@@ -29,7 +29,8 @@ Some contenent here.
 
 :::
 
-{{< slide-viewer /pdfs/courses/fds/lectures/chapter_2.pdf title="Chapter 1: Introduction" height="650px" >}}
+{{< slide-viewer /pdfs/courses/fds/lectures/chapter_2.pdf title="Chapter 1: Introduction" height="700px" >}}
+
 
 ::: {.content-visible when-profile="en"}
 
