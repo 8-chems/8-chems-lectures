@@ -9,33 +9,59 @@ return {
 
     local html = string.format([[
 <div id="%s" style="max-width: 1000px; margin: 2rem auto;">
-  <h3 style="margin-bottom: 1rem; color: #333; text-align: center;">%s</h3>
+  <h3 style="margin-bottom: 1.5rem; color: #2c3e50; text-align: center; font-size: 1.8rem;">%s</h3>
 
-  <!-- Controls -->
-  <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
-    <button onclick="slideViewer_%s.prevPage()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 5px;">
-      ◀ Previous
+  <!-- PDF Canvas Container -->
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative;">
+    <canvas id="pdf-canvas-%s" style="max-width: 100%%; display: block; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: white;"></canvas>
+
+    <!-- Navigation Arrows -->
+    <button onclick="slideViewer_%s.prevPage()"
+      style="position: absolute; left: 10px; top: 50%%; transform: translateY(-50%%); width: 50px; height: 50px; background: rgba(102, 126, 234, 0.9); color: white; border: none; border-radius: 50%%; cursor: pointer; font-size: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.3s; display: flex; align-items: center; justify-content: center;"
+      onmouseover="this.style.background='rgba(102, 126, 234, 1)'; this.style.transform='translateY(-50%%) scale(1.1)';"
+      onmouseout="this.style.background='rgba(102, 126, 234, 0.9)'; this.style.transform='translateY(-50%%) scale(1)';"
+      title="Previous slide (←)">
+      ◀
     </button>
-    <span id="page-info-%s" style="padding: 10px 20px; background: #f0f0f0; border-radius: 6px; font-weight: 500; display: flex; align-items: center;">
-      Page 1 / 1
-    </span>
-    <button onclick="slideViewer_%s.nextPage()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 5px;">
-      Next ▶
+
+    <button onclick="slideViewer_%s.nextPage()"
+      style="position: absolute; right: 10px; top: 50%%; transform: translateY(-50%%); width: 50px; height: 50px; background: rgba(102, 126, 234, 0.9); color: white; border: none; border-radius: 50%%; cursor: pointer; font-size: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.3s; display: flex; align-items: center; justify-content: center;"
+      onmouseover="this.style.background='rgba(102, 126, 234, 1)'; this.style.transform='translateY(-50%%) scale(1.1)';"
+      onmouseout="this.style.background='rgba(102, 126, 234, 0.9)'; this.style.transform='translateY(-50%%) scale(1)';"
+      title="Next slide (→)">
+      ▶
     </button>
-    <button onclick="slideViewer_%s.zoomIn()" style="padding: 10px 20px; background: #764ba2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-      🔍+
-    </button>
-    <button onclick="slideViewer_%s.zoomOut()" style="padding: 10px 20px; background: #764ba2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-      🔍-
-    </button>
-    <a href="%s" download style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-      📥 Download
-    </a>
   </div>
 
-  <!-- PDF Canvas -->
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; min-height: %s;">
-    <canvas id="pdf-canvas-%s" style="max-width: 100%%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: white;"></canvas>
+  <!-- Controls Bottom Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="display: flex; gap: 10px;">
+      <button onclick="slideViewer_%s.zoomOut()"
+        style="width: 40px; height: 40px; background: #764ba2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.2s;"
+        onmouseover="this.style.transform='scale(1.1)';"
+        onmouseout="this.style.transform='scale(1)';"
+        title="Zoom out">
+        −
+      </button>
+      <button onclick="slideViewer_%s.zoomIn()"
+        style="width: 40px; height: 40px; background: #764ba2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.2s;"
+        onmouseover="this.style.transform='scale(1.1)';"
+        onmouseout="this.style.transform='scale(1)';"
+        title="Zoom in">
+        +
+      </button>
+    </div>
+
+    <div id="page-info-%s" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; border-radius: 20px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+      Page 1 / 1
+    </div>
+
+    <a href="%s" download
+      style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);"
+      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(40, 167, 69, 0.4)';"
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(40, 167, 69, 0.3)';">
+      📥 Download
+    </a>
   </div>
 </div>
 
@@ -126,7 +152,7 @@ return {
     renderPage(pageNum);
   }).catch(function(error) {
     console.error('Error loading PDF:', error);
-    canvas.parentElement.innerHTML = '<p style="color: red; text-align: center;">Error loading PDF. Please check the file path.</p>';
+    canvas.parentElement.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">Error loading PDF. Please check the file path.</p>';
   });
 
   // Keyboard navigation
@@ -136,7 +162,7 @@ return {
   });
 })();
 </script>
-]], id, title, id, id, id, id, id, src, height, id, src, id, id, id, id)
+]], id, title, id, id, id, id, id, id, src, src, id, id, id)
 
     return pandoc.RawBlock('html', html)
   end
