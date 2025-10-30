@@ -1,6 +1,6 @@
 project:
   type: website
-  output-dir: "./_site/en"
+  output-dir: "./_site"
   render:
     - index.qmd
     # English content
