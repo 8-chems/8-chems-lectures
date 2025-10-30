@@ -1,9 +1,10 @@
-~~---
+---
 title: Introduction
 title-en: Introduction
 author: Chemseddine Berbague
 categories:
-  - data-science, machine-learning
+  - data-science
+  - machine-learning
 description: " "
 description-en: |
     Some description goes here.
@@ -11,25 +12,15 @@ image: https://ensae-reproductibilite.github.io/website/egg.jpg
 bibliography: ../../reference.bib
 ---
 
-
-
 :::: {.content-visible when-profile="en"}
 
 ::: {.callout-tip collapse="true"}
 ## Skills you will acquire in this chapter
- hello world !
+
+hello world !
 :::
 
 ::::
-
- 
-<iframe 
-  src="pdfjs/web/viewer.html?file=https://raw.githubusercontent.com/8-chems/myportfolio-src/main/courses/fds/lectures/chapter_1.pdf"
-  width="100%"
-  height="600px"
-  style="border: 1px solid #ccc; border-radius: 8px;"
-  frameborder="0">
-</iframe>
 
 {{< slide-viewer /pdfs/courses/fds/lectures/chapter_1.pdf title="Chapter 1: Introduction" height="700px" >}}
 
@@ -38,8 +29,4 @@ bibliography: ../../reference.bib
 :::
 
 ::: {#refs}
-:::~~
-
-
-
-
+:::
