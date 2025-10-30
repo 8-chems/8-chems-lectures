@@ -11,13 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 0: we get the pdf files.
+
+
+      # Step 0: Checkout the repository
+      - uses: actions/checkout@v4
+
+      # Step 1: we get the pdf files.
       run: |
         chmod +x ./build/get-pdfs.sh
         sudo ./build/get-pdfs.sh
-
-      # Step 1: Checkout the repository
-      - uses: actions/checkout@v4
 
       # Step 2: Set up Quarto
       - name: Set up Quarto
