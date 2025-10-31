@@ -13,6 +13,9 @@ listing:
     contents:
         - "content/chapter_1/index.qmd"
         - "content/chapter_2/index.qmd"
+        - "content/chapter_3/index.qmd"
+        - "content/chapter_4/index.qmd"
+        - "content/chapter_5/index.qmd"
 
     type: grid
     sort: "number"
@@ -102,9 +105,8 @@ version_ui = "en"
 #| echo: false
 from build.homepage.chapterlist import create_div_chapter_list
 
-
 text_en = (
-  "A step-by-step course to explore data science with {{< fa brands python >}}, "
+  "A step-by-step course to explore fundamentals of data science with {{< fa brands python >}}, "
   "structured into complementary yet standalone chapters.\n\n"
 )
 
@@ -114,9 +116,10 @@ final_html_en = create_div_chapter_list(
   introductory_text=text_en
 )
 
+# The function already creates <div class="list-chapter-ordered-en">
+# So we wrap it in the parent div
 final_html = (
   "<div class='list-chapter-ordered'>"
-
   f'{final_html_en}'
   "</div>"
 )
@@ -138,14 +141,14 @@ print(final_html)
 viewof ordre = ToggleSwitch({
   labels: labels,
   values: ["ordre", "vrac"],
-  value: "vrac",
+  value: "ordre",
   sliderColor: quartoThemeIsDark ? "#e7c582" : "#444",
   textColor: quartoThemeIsDark ? "#e7c582" : "#444"
 })
 ```
 
 ```{ojs}
-// Capture `.list-chapter-unordered`
+// Capture the content - need to get the PARENT div that contains language-specific divs
 initialOrdered = Array.from(document.querySelectorAll('.list-chapter-ordered'))
   .map(div => div.innerHTML)
 
@@ -156,26 +159,30 @@ initialUnordered = Array.from(document.querySelectorAll('.list-chapter-unordered
 ```{ojs}
 //| output: false
 {
-  const orderedDivs = document.querySelectorAll('.list-chapter-ordered');
+  const orderedDivs = document.querySelectorAll('.list-chapter-ordered-en, .list-chapter-ordered-fr');
   const unorderedDivs = document.querySelectorAll('.list-chapter-unordered');
 
-  const lang = version_ui; // 'fr' ou 'en'
-  const otherLang = lang === 'fr' ? 'en' : 'fr';
+
+  const lang = version_ui; // 'en'
+  const otherLang =  'fr';
 
   if (ordre === 'vrac') {
     unorderedDivs.forEach((div, i) => div.innerHTML = initialUnordered[i]);
     orderedDivs.forEach(div => div.innerHTML = '');
   } else {
     orderedDivs.forEach((div, i) => {
-      // Restaurer le contenu initial
+      // Restore the initial content
       div.innerHTML = initialOrdered[i];
 
-      // Supprimer le bloc de la langue non sélectionnée
+      // Now remove the other language version (French in your case)
+      // The inner div has class "list-chapter-ordered-fr" or "list-chapter-ordered-en"
       const otherLangBlock = div.querySelector(`.list-chapter-ordered-${otherLang}`);
-      if (otherLangBlock) otherLangBlock.remove();
+      if (otherLangBlock) {
+        otherLangBlock.remove();
+      }
     });
 
-    // Cacher les unordered
+    // Hide unordered
     unorderedDivs.forEach(div => div.innerHTML = '');
   }
 }
@@ -356,6 +363,6 @@ input:checked + .slider:before {
   setTimeout(() => {
     const giscus = document.querySelector('.giscus');
     if (giscus) giscus.style.display = "none";
-  }, 3000); // 5000ms = 5 seconds
+  }, 3000); // 3000ms = 3 seconds
 }
 ```

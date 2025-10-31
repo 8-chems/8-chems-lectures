@@ -5,6 +5,9 @@ project:
     - 404.qmd
     - content/chapter_1/*.qmd
     - content/chapter_2/*.qmd
+    - content/chapter_3/*.qmd
+    - content/chapter_4/*.qmd
+    - content/chapter_5/*.qmd
 
 resources:
   - pdfjs/
@@ -46,6 +49,9 @@ website:
         text: Home
       - sidebar:chapter_1
       - sidebar:chapter_2
+      - sidebar:chapter_3
+      - sidebar:chapter_4
+      - sidebar:chapter_5
 
 
     tools:
