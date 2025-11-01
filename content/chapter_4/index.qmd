@@ -37,7 +37,7 @@ By completing this chapter, learners will be able to:
 
 ::::
 
-{{< slide-viewer /pdfs/courses/fds/lectures/chapter_4.pdf title="Chapter 4" >}}
+{{< slide-viewer /lectures/pdfs/courses/fds/lectures/chapter_4.pdf title="Chapter 4" >}}
 
 ::::
 

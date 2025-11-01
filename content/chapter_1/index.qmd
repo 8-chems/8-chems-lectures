@@ -33,7 +33,7 @@ In a world where most decisions are made based on partial information and uncert
 
 ::::
 
-{{< slide-viewer /pdfs/courses/fds/lectures/chapter_1.pdf title="Chapter 1" >}}
+{{< slide-viewer /lectures/pdfs/courses/fds/lectures/chapter_1.pdf title="Chapter 1" >}}
 
 ::::
 

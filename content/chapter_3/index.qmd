@@ -36,7 +36,7 @@ Additionally, learners will explore both **basic and advanced data preprocessing
 
 ::::
 
-{{< slide-viewer /pdfs/courses/fds/lectures/chapter_3.pdf title="Chapter 3" >}}
+{{< slide-viewer /lectures/pdfs/courses/fds/lectures/chapter_3.pdf title="Chapter 3" >}}
 
 ::::
 
